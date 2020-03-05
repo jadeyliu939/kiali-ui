@@ -16,6 +16,7 @@ import ThreeScaleHandlerListPage from './pages/extensions/threescale/ThreeScaleH
 import ThreeScaleHandlerDetailsPage from './pages/extensions/threescale/ThreeScaleHandlerDetails/ThreeScaleHandlerDetailsPage';
 import ExperimentListPage from './pages/extensions/iter8/ExperimentListPage';
 import ExperimentCreatePage from './pages/extensions/iter8/ExperimentCreatePage';
+import ExperimentDetailsPage from './pages/extensions/iter8/ExperimentDetailsPage';
 
 /**
  * Return array of objects that describe vertical menu
@@ -151,6 +152,10 @@ const pathRoutes: Path[] = [
   {
     path: '/' + Paths.JAEGER,
     component: undefined
+  },
+  {
+    path: '/extensions/iter8/namespaces/:namespace/name/:name',
+    component: ExperimentDetailsPage
   }
 ];
 

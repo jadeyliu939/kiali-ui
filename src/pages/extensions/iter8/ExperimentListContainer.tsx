@@ -61,6 +61,10 @@ const columns = [
     transforms: [sortable]
   },
   {
+    title: 'Service',
+    transforms: [sortable]
+  },
+  {
     title: 'Phase',
     transforms: [sortable]
   },
@@ -235,6 +239,7 @@ class ExperimentListPage extends FilterComponent.Component<Props, State, Iter8Ex
               {h.name}
             </Link>
           </>,
+          <>{h.targetService}</>,
           <>{h.phase}</>,
           <>{h.status}</>,
           <>

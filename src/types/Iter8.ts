@@ -8,6 +8,7 @@ export interface Iter8Info {
 export interface Iter8Experiment {
   name: string;
   phase: string;
+  targetService: string;
   status: string;
   baseline: string;
   baselinePercentage: number;
@@ -32,12 +33,17 @@ export interface ExperimentItem {
   status: string;
   labels?: { [key: string]: string };
   createdAt: string;
+  startedAt: string;
+  endedAt: string;
   resourceVersion: string;
   baseline: string;
   baselinePercentage: number;
   candidate: string;
   candidatePercentage: number;
   namespace: string;
+  targetService: string;
+  targetServiceNamespace: string;
+  assessmentConclusion: string;
 }
 export interface SuccessCriteria {
   name: string;
