@@ -3,6 +3,7 @@ import {
   Badge,
   Card,
   CardBody,
+  CardFooter,
   DataList,
   DataListCell,
   DataListItem,
@@ -21,22 +22,25 @@ import './ExperimentInfoDescription.css';
 
 import LocalTime from '../../../../components/Time/LocalTime';
 // @ts-ignore
-import { ExperimentItem } from '../../../../types/iter8';
+// import { ExperimentItem } from '../../../../types/iter8';
 import { Link } from 'react-router-dom';
-import GraphDataSource from '../../../../services/GraphDataSource';
-import { App } from '../../../../types/App';
+// import GraphDataSource from '../../../../services/GraphDataSource';
+// import { App } from '../../../../types/App';
 import { RenderComponentScroll } from '../../../../components/Nav/Page';
 import CriteriaTable from './CriteriaTable';
 import { Iter8ExpDetailsInfo } from '../../../../types/Iter8';
-import IstioMetricsContainer from '../../../../components/Metrics/IstioMetrics';
+// import CustomMetricsContainer from '../../../../components/Metrics/CustomMetrics';
+import Iter8eMtricsContainer from '../../../../components/Metrics/Iter8Metrics';
 import { MetricsObjectTypes } from '../../../../types/Metrics';
-
 // const cytoscapeGraphContainerStyle = style({ height: '300px' });
 
 interface ExperimentInfoDescriptionProps {
+  target: string;
+  namespace: string;
   experimentDetails: Iter8ExpDetailsInfo;
-  app: App;
-  miniGraphDataSource: GraphDataSource;
+  experiment: string;
+  // app: App;
+  // miniGraphDataSource: GraphDataSource;
 }
 
 class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptionProps> {
@@ -52,7 +56,7 @@ class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptio
         <Badge>S</Badge>
       </DataListCell>,
       <DataListCell key="targetService">
-        <Text component={TextVariants.h3}>Target Service</Text>
+        <Text component={TextVariants.h3}>Service</Text>
       </DataListCell>
     ];
   }
@@ -73,7 +77,7 @@ class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptio
   renderDeployments(baseline: string) {
     return (
       <ListItem key={`AppService_${baseline}`}>
-        <Link to={this.workloadLink(this.props.experimentDetails.experimentItem.namespace, baseline)}>{baseline}</Link>
+        <Link to={this.workloadLink(this.props.namespace, baseline)}>{baseline}</Link>
       </ListItem>
     );
   }
@@ -107,7 +111,7 @@ class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptio
     return (
       <RenderComponentScroll>
         <Grid gutter="md">
-          <GridItem span={4}>
+          <GridItem span={6}>
             <Card style={{ height: '100%' }}>
               <CardBody>
                 <DataList aria-label="baseline and candidate">
@@ -115,10 +119,7 @@ class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptio
                     <DataListItemRow>
                       <DataListItemCells dataListCells={this.serviceInfo()} />
                       <DataListItemCells
-                        dataListCells={this.serviceLinkCell(
-                          this.props.experimentDetails.experimentItem.targetServiceNamespace,
-                          this.props.experimentDetails.experimentItem.targetService
-                        )}
+                        dataListCells={this.serviceLinkCell(this.props.namespace, this.props.target)}
                       />
                     </DataListItemRow>
                   </DataListItem>
@@ -187,20 +188,20 @@ class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptio
               </CardBody>
             </Card>
           </GridItem>
-          <GridItem span={4}>
+          <GridItem span={6}>
             <Card style={{ height: '100%' }}>
               <CardBody>
-                <IstioMetricsContainer
-                  namespace={this.props.experimentDetails.experimentItem.targetServiceNamespace}
-                  object={this.props.experimentDetails.experimentItem.targetService}
+                <Iter8eMtricsContainer
+                  namespace={this.props.namespace}
+                  object={this.props.target}
                   objectType={MetricsObjectTypes.ITER8}
                   direction={'inbound'}
                 />
               </CardBody>
+              <CardFooter>
+                <CriteriaTable criterias={this.props.experimentDetails.criterias} />
+              </CardFooter>
             </Card>
-          </GridItem>
-          <GridItem span={4}>
-            <CriteriaTable criterias={this.props.experimentDetails.criterias} />
           </GridItem>
         </Grid>
       </RenderComponentScroll>

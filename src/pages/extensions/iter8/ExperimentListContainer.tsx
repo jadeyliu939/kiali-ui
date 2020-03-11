@@ -21,13 +21,15 @@ import * as FilterComponent from '../../../components/FilterList/FilterComponent
 
 import RefreshButtonContainer from '../../../components/Refresh/RefreshButton';
 import { KialiAppState } from '../../../store/Store';
-import { activeNamespacesSelector } from '../../../store/Selectors';
+import { activeNamespacesSelector, durationSelector } from '../../../store/Selectors';
 import { connect } from 'react-redux';
 import { IstioConfigItem } from '../../../types/IstioConfigList';
 import { SortField } from '../../../types/SortFilters';
 import Namespace from '../../../types/Namespace';
 import { PromisesRegistry } from '../../../utils/CancelablePromises';
-
+import { namespaceEquals } from '../../../utils/Common';
+import { DurationInSeconds } from '../../../types/Common';
+import { ServiceListItem } from '../../../types/ServiceList';
 // Style constants
 const containerPadding = style({ padding: '20px 20px 20px 20px' });
 const containerWhite = style({ backgroundColor: PfColors.White });
@@ -42,9 +44,12 @@ const pageTitle = (
   </div>
 );
 
-interface Props extends FilterComponent.State<Iter8Experiment> {
+type ReduxProps = {
+  duration: DurationInSeconds;
   activeNamespaces: Namespace[];
-}
+};
+
+type ExperimentListComponentProps = ReduxProps & FilterComponent.Props<ServiceListItem>;
 
 // State of the component/page
 // It stores the visual state of the components and the experiments fetched from the backend.
@@ -86,10 +91,10 @@ const columns = [
   }
 ];
 
-class ExperimentListPage extends FilterComponent.Component<Props, State, Iter8Experiment> {
+class ExperimentListPage extends FilterComponent.Component<ExperimentListComponentProps, State, Iter8Experiment> {
   private promises = new PromisesRegistry();
 
-  constructor(props: Props) {
+  constructor(props: ExperimentListComponentProps) {
     super(props);
     this.state = {
       iter8Info: {
@@ -128,6 +133,7 @@ class ExperimentListPage extends FilterComponent.Component<Props, State, Iter8Ex
               AlertUtils.addError('Could not fetch Iter8 Experiments.', error);
             });
         } else {
+          AlertUtils.addError('Kiali has iter8 extension enabled but iter8 controller is not detected in the cluster');
         }
       })
       .catch(error => {
@@ -141,10 +147,30 @@ class ExperimentListPage extends FilterComponent.Component<Props, State, Iter8Ex
     this.updateListItems();
   }
 
-  componentDidUpdate() {
+  componentDidUpdate(prevProps: ExperimentListComponentProps, _prevState: State, _snapshot: any) {
     // this.fetchExperiments([]);
-    this.updateListItems();
+    // this.updateListItems();
+    const [paramsSynced] = this.paramsAreSynced(prevProps);
+    if (!paramsSynced) {
+      this.setState({
+        currentSortField: this.props.currentSortField,
+        isSortAscending: this.props.isSortAscending
+      });
+
+      this.updateListItems();
+    }
   }
+
+  paramsAreSynced = (prevProps: ExperimentListComponentProps): [boolean, boolean] => {
+    const activeNamespacesCompare = namespaceEquals(prevProps.activeNamespaces, this.props.activeNamespaces);
+    const paramsSynced =
+      prevProps.duration === this.props.duration &&
+      activeNamespacesCompare &&
+      prevProps.isSortAscending === this.props.isSortAscending &&
+      prevProps.currentSortField.title === this.props.currentSortField.title;
+    return [paramsSynced, activeNamespacesCompare];
+  };
+  //  }
 
   // place holder, need to decide what is sortable field
   sortItemList(apps: Iter8Experiment[], sortField: SortField<IstioConfigItem>, isAscending: boolean) {
@@ -233,8 +259,8 @@ class ExperimentListPage extends FilterComponent.Component<Props, State, Iter8Ex
         cells: [
           <>
             <Link
-              to={`/extensions/iter8/namespaces/${h.namespace}/name/${h.name}`}
-              key={'Experiment_' + h.namespace + '_' + h.namespace}
+              to={`/extensions/iter8/namespaces/${h.namespace}/name/${h.targetService}/experiment/${h.name}`}
+              key={'Experiment_' + h.namespace + '_' + h.name}
             >
               {h.name}
             </Link>
@@ -274,7 +300,8 @@ class ExperimentListPage extends FilterComponent.Component<Props, State, Iter8Ex
 }
 
 const mapStateToProps = (state: KialiAppState) => ({
-  activeNamespaces: activeNamespacesSelector(state)
+  activeNamespaces: activeNamespacesSelector(state),
+  duration: durationSelector(state)
 });
 
 const ExperimentListPageContainer = connect(

@@ -1,4 +1,5 @@
 import { ResourcePermissions } from './Permissions';
+import { MetricsQuery } from '@kiali/k-charted-pf4';
 
 export interface Iter8Info {
   enabled: boolean;
@@ -63,3 +64,13 @@ export interface Criteria {
   sampleSize: number;
   stopOnFailure: boolean;
 }
+
+export interface Iter8MetricsOptions extends MetricsQuery {
+  direction: Direction;
+  filters?: string[];
+  requestProtocol?: string;
+  reporter: Reporter;
+}
+
+export type Reporter = 'source' | 'destination';
+export type Direction = 'inbound' | 'outbound';

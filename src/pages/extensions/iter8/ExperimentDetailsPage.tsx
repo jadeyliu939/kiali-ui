@@ -29,8 +29,7 @@ import { PfColors } from '../../../components/Pf/PfColors';
 import history from '../../../app/History';
 import RefreshButtonContainer from '../../../components/Refresh/RefreshButton';
 import RefreshContainer from '../../../components/Refresh/Refresh';
-import GraphDataSource from '../../../services/GraphDataSource';
-import { EdgeLabelMode, GraphType, NodeType } from '../../../types/Graph';
+// import GraphDataSource from '../../../services/GraphDataSource';
 import { App } from '../../../types/App';
 
 type ExpDetailsState = {
@@ -44,6 +43,7 @@ type ExpDetailsState = {
 interface Props {
   namespace: string;
   name: string;
+  experiment: string;
 }
 
 const containerWhite = style({ backgroundColor: PfColors.White });
@@ -88,7 +88,7 @@ const tabIndex: { [tab: string]: number } = {
 };
 
 class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, ExpDetailsState> {
-  private graphDataSource: GraphDataSource;
+  //  private graphDataSource: GraphDataSource;
 
   constructor(props: RouteComponentProps<Props>) {
     super(props);
@@ -106,7 +106,7 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
       app: emptyApp,
       dropdownOpen: false
     };
-    this.graphDataSource = new GraphDataSource();
+    // this.graphDataSource = new GraphDataSource();
   }
 
   componentDidMount() {
@@ -163,7 +163,7 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
       .then(result => {
         const iter8Info = result.data;
         if (iter8Info.enabled) {
-          API.getExperiment(this.props.match.params.namespace, this.props.match.params.name)
+          API.getExperiment(this.props.match.params.namespace, this.props.match.params.experiment)
             .then(result2 => {
               const expDetailsInfo = result2.data;
               API.getApp(
@@ -172,11 +172,6 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
               )
                 .then(details => {
                   this.setState(prevState => {
-                    this.loadMiniGraphData(
-                      expDetailsInfo.experimentItem.targetServiceNamespace,
-                      expDetailsInfo.experimentItem.targetService,
-                      this.props.match.params.name
-                    );
                     return {
                       app: details.data,
                       expDetailsInfo: result2.data,
@@ -205,25 +200,6 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
     history.push('/extensions/iter8');
   };
 
-  staticTabs() {
-    const overviewTab = (
-      <Tab title="Overview" eventKey={0} key={'Overview'}>
-        <ExperimentInfoDescription
-          experimentDetails={this.state.expDetailsInfo}
-          app={this.state.app}
-          miniGraphDataSource={this.graphDataSource}
-        />
-      </Tab>
-    );
-
-    const criteriaTab = (
-      <Tab title="Criteria" eventKey={1} key={'Traffic'}>
-        <CriteriaInfoDescription criterias={this.state.expDetailsInfo.criterias} />
-      </Tab>
-    );
-    return [overviewTab, criteriaTab];
-  }
-
   handleTabClick = (_, tabIndex) => {
     this.setState({
       currentTab: tabIndex
@@ -237,9 +213,10 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
         component = (
           <Tab title="Overview" eventKey={0} key={'Overview'}>
             <ExperimentInfoDescription
+              namespace={this.props.match.params.namespace}
+              target={this.props.match.params.name}
               experimentDetails={this.state.expDetailsInfo}
-              app={this.state.app}
-              miniGraphDataSource={this.graphDataSource}
+              experiment={this.props.match.params.experiment}
             />
           </Tab>
         );
@@ -297,9 +274,10 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
     const overviewTab = (
       <Tab eventKey={0} title="Overview" key="Overview">
         <ExperimentInfoDescription
+          namespace={this.props.match.params.namespace}
+          experiment={this.props.match.params.experiment}
+          target={this.props.match.params.name}
           experimentDetails={this.state.expDetailsInfo}
-          app={this.state.app}
-          miniGraphDataSource={this.graphDataSource}
         />
       </Tab>
     );
@@ -311,7 +289,7 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
 
     // Default tabs
     const tabsArray: any[] = [overviewTab, criteriaTab];
-    const title = this.props.match.params.name;
+    const title = this.props.match.params.experiment;
     return (
       <>
         {this.pageTitle(title)}
@@ -341,36 +319,13 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
   }
 
   fetchApp = () => {
-    API.getApp(
-      this.state.expDetailsInfo.experimentItem.targetServiceNamespace,
-      this.state.expDetailsInfo.experimentItem.targetService
-    )
+    API.getApp(this.props.match.params.namespace, this.props.match.params.name)
       .then(details => {
         this.setState({ app: details.data });
       })
       .catch(error => {
         AlertUtils.addError('Could not fetch App Details.', error);
       });
-  };
-
-  private loadMiniGraphData = (namespace, name, experiment) => {
-    this.graphDataSource.fetchGraphData({
-      namespaces: [{ name: namespace }],
-      duration: 600,
-      graphType: GraphType.WORKLOAD,
-      injectServiceNodes: true,
-      edgeLabelMode: EdgeLabelMode.REQUESTS_PER_SECOND,
-      showSecurity: false,
-      showUnusedNodes: false,
-      node: {
-        app: experiment,
-        namespace: { name: namespace },
-        nodeType: NodeType.EXPERIMENT,
-        service: name,
-        version: '',
-        workload: ''
-      }
-    });
   };
 }
 

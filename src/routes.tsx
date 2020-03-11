@@ -154,7 +154,7 @@ const pathRoutes: Path[] = [
     component: undefined
   },
   {
-    path: '/extensions/iter8/namespaces/:namespace/name/:name',
+    path: '/extensions/iter8/namespaces/:namespace/name/:name/experiment/:experiment',
     component: ExperimentDetailsPage
   }
 ];

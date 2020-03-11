@@ -1,27 +1,24 @@
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
-import { Card, CardBody, Grid, GridItem, Toolbar, ToolbarGroup, ToolbarItem } from '@patternfly/react-core';
+import { Toolbar, ToolbarGroup, ToolbarItem } from '@patternfly/react-core';
 import { Dashboard, DashboardModel, ExternalLink, Overlay, VCDataPoint } from '@kiali/k-charted-pf4';
-import { style } from 'typestyle';
 
 import RefreshContainer from '../../components/Refresh/Refresh';
-import { RenderComponentScroll } from '../../components/Nav/Page';
 import * as API from '../../services/Api';
 import { KialiAppState } from '../../store/Store';
 import { TimeRange, evalTimeRange } from '../../types/Common';
-import { Direction, IstioMetricsOptions, Reporter } from '../../types/MetricsOptions';
+import { Direction, Reporter } from '../../types/MetricsOptions';
 import * as AlertUtils from '../../utils/AlertUtils';
+import { Iter8MetricsOptions } from '../../types/Iter8';
 
 import * as MetricsHelper from './Helper';
 import { MetricsSettings, LabelsSettings } from '../MetricsOptions/MetricsSettings';
-import { MetricsSettingsDropdown } from '../MetricsOptions/MetricsSettingsDropdown';
 import MetricsReporter from '../MetricsOptions/MetricsReporter';
 import history, { URLParam } from '../../app/History';
 import { MetricsObjectTypes } from '../../types/Metrics';
 import { GrafanaInfo } from '../../types/GrafanaInfo';
 import { MessageType } from '../../types/MessageCenter';
-import { GrafanaLinks } from './GrafanaLinks';
 import { SpanOverlay } from './SpanOverlay';
 import TimeRangeComponent from 'components/Time/TimeRangeComponent';
 import { retrieveTimeRange, storeBounds } from 'components/Time/TimeRangeHelper';
@@ -39,23 +36,19 @@ type ObjectId = {
   object: string;
 };
 
-type IstioMetricsProps = ObjectId &
+type Iter8MetricsProps = ObjectId &
   RouteComponentProps<{}> & {
     objectType: MetricsObjectTypes;
     direction: Direction;
   };
 
-type Props = IstioMetricsProps & {
+type Props = Iter8MetricsProps & {
   // Redux props
   jaegerIntegration: boolean;
 };
 
-const displayFlex = style({
-  display: 'flex'
-});
-
-class IstioMetrics extends React.Component<Props, MetricsState> {
-  options: IstioMetricsOptions;
+class Iter8Metrics extends React.Component<Props, MetricsState> {
+  options: Iter8MetricsOptions;
   spanOverlay: SpanOverlay;
   static grafanaInfoPromise: Promise<GrafanaInfo | undefined> | undefined;
 
@@ -70,8 +63,8 @@ class IstioMetrics extends React.Component<Props, MetricsState> {
     this.spanOverlay = new SpanOverlay(changed => this.setState({ spanOverlay: changed }));
   }
 
-  initOptions(settings: MetricsSettings): IstioMetricsOptions {
-    const options: IstioMetricsOptions = {
+  initOptions(settings: MetricsSettings): Iter8MetricsOptions {
+    const options: Iter8MetricsOptions = {
       reporter: MetricsReporter.initialReporter(this.props.direction),
       direction: this.props.direction
     };
@@ -99,22 +92,9 @@ class IstioMetrics extends React.Component<Props, MetricsState> {
     // Time range needs to be reevaluated everytime fetching
     MetricsHelper.timeRangeToOptions(this.state.timeRange, this.options);
     let promise: Promise<API.Response<DashboardModel>>;
-    switch (this.props.objectType) {
-      case MetricsObjectTypes.WORKLOAD:
-        promise = API.getWorkloadDashboard(this.props.namespace, this.props.object, this.options);
-        break;
-      case MetricsObjectTypes.APP:
-        promise = API.getAppDashboard(this.props.namespace, this.props.object, this.options);
-        break;
-      case MetricsObjectTypes.ITER8:
-        this.options.byLabels = ['destination_version'];
-        promise = API.getIter8Dashboard(this.props.namespace, this.props.object, this.options);
-        break;
-      case MetricsObjectTypes.SERVICE:
-      default:
-        promise = API.getServiceDashboard(this.props.namespace, this.props.object, this.options);
-        break;
-    }
+    this.options.byLabels = ['destination_version'];
+    promise = API.getIter8Dashboard(this.props.namespace, this.props.object, this.options);
+
     return promise
       .then(response => {
         const labelsSettings = MetricsHelper.extractLabelsSettings(response.data, this.state.labelsSettings);
@@ -130,15 +110,15 @@ class IstioMetrics extends React.Component<Props, MetricsState> {
   };
 
   fetchGrafanaInfo() {
-    if (!IstioMetrics.grafanaInfoPromise) {
-      IstioMetrics.grafanaInfoPromise = API.getGrafanaInfo().then(response => {
+    if (!Iter8Metrics.grafanaInfoPromise) {
+      Iter8Metrics.grafanaInfoPromise = API.getGrafanaInfo().then(response => {
         if (response.status === 204) {
           return undefined;
         }
         return response.data;
       });
     }
-    IstioMetrics.grafanaInfoPromise
+    Iter8Metrics.grafanaInfoPromise
       .then(grafanaInfo => {
         if (grafanaInfo) {
           this.setState({ grafanaLinks: grafanaInfo.externalLinks });
@@ -155,11 +135,6 @@ class IstioMetrics extends React.Component<Props, MetricsState> {
         );
       });
   }
-
-  onMetricsSettingsChanged = (settings: MetricsSettings) => {
-    MetricsHelper.settingsToOptions(settings, this.options);
-    this.fetchMetrics();
-  };
 
   onLabelsFiltersChanged = (labelsFilters: LabelsSettings) => {
     this.setState({ labelsSettings: labelsFilters });
@@ -207,57 +182,26 @@ class IstioMetrics extends React.Component<Props, MetricsState> {
     const expandedChart = urlParams.get('expand') || undefined;
 
     return (
-      <RenderComponentScroll>
-        <Grid style={{ padding: '20px' }}>
-          <GridItem span={12}>
-            <Card>
-              <CardBody>
-                {this.renderOptionsBar()}
-                <Dashboard
-                  dashboard={this.state.dashboard}
-                  labelValues={MetricsHelper.convertAsPromLabels(this.state.labelsSettings)}
-                  expandedChart={expandedChart}
-                  expandHandler={this.expandHandler}
-                  onClick={this.onClickDataPoint}
-                  labelPrettifier={MetricsHelper.prettyLabelValues}
-                  overlay={this.state.spanOverlay}
-                  timeWindow={evalTimeRange(retrieveTimeRange() || MetricsHelper.defaultMetricsDuration)}
-                  brushHandlers={{ onDomainChangeEnd: (_, props) => this.onDomainChange(props.currentDomain.x) }}
-                />
-              </CardBody>
-            </Card>
-          </GridItem>
-        </Grid>
-      </RenderComponentScroll>
+      <>
+        {this.renderOptionsBar()}
+        <Dashboard
+          dashboard={this.state.dashboard}
+          labelValues={MetricsHelper.convertAsPromLabels(this.state.labelsSettings)}
+          expandedChart={expandedChart}
+          expandHandler={this.expandHandler}
+          onClick={this.onClickDataPoint}
+          labelPrettifier={MetricsHelper.prettyLabelValues}
+          overlay={this.state.spanOverlay}
+          timeWindow={evalTimeRange(retrieveTimeRange() || MetricsHelper.defaultMetricsDuration)}
+          brushHandlers={{ onDomainChangeEnd: (_, props) => this.onDomainChange(props.currentDomain.x) }}
+        />
+      </>
     );
   }
 
   renderOptionsBar() {
     return (
       <Toolbar style={{ paddingBottom: 8 }}>
-        <ToolbarGroup>
-          <ToolbarItem>
-            <MetricsSettingsDropdown
-              onChanged={this.onMetricsSettingsChanged}
-              onLabelsFiltersChanged={this.onLabelsFiltersChanged}
-              labelsSettings={this.state.labelsSettings}
-              hasHistograms={true}
-            />
-          </ToolbarItem>
-        </ToolbarGroup>
-        <ToolbarGroup>
-          <ToolbarItem className={displayFlex}>
-            <MetricsReporter onChanged={this.onReporterChanged} direction={this.props.direction} />
-          </ToolbarItem>
-        </ToolbarGroup>
-        <ToolbarGroup>
-          <GrafanaLinks
-            links={this.state.grafanaLinks}
-            namespace={this.props.namespace}
-            object={this.props.object}
-            objectType={this.props.objectType}
-          />
-        </ToolbarGroup>
         <ToolbarGroup style={{ marginLeft: 'auto', marginRight: 0 }}>
           <ToolbarItem>
             <TimeRangeComponent
@@ -291,8 +235,8 @@ const mapStateToProps = (state: KialiAppState) => {
   };
 };
 
-const IstioMetricsContainer = withRouter<RouteComponentProps<{}> & IstioMetricsProps, any>(
-  connect(mapStateToProps)(IstioMetrics)
+const Iter8MetricsContainer = withRouter<RouteComponentProps<{}> & Iter8MetricsProps, any>(
+  connect(mapStateToProps)(Iter8Metrics)
 );
 
-export default IstioMetricsContainer;
+export default Iter8MetricsContainer;
