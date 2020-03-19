@@ -21,27 +21,42 @@ import {
 import './ExperimentInfoDescription.css';
 
 import LocalTime from '../../../../components/Time/LocalTime';
-// @ts-ignore
-// import { ExperimentItem } from '../../../../types/iter8';
 import { Link } from 'react-router-dom';
-// import GraphDataSource from '../../../../services/GraphDataSource';
-// import { App } from '../../../../types/App';
-import { RenderComponentScroll } from '../../../../components/Nav/Page';
 import CriteriaTable from './CriteriaTable';
 import { Iter8ExpDetailsInfo } from '../../../../types/Iter8';
-// import CustomMetricsContainer from '../../../../components/Metrics/CustomMetrics';
-import Iter8eMtricsContainer from '../../../../components/Metrics/Iter8Metrics';
+import Iter8MetricsContainer from '../../../../components/Metrics/Iter8Metrics';
 import { MetricsObjectTypes } from '../../../../types/Metrics';
-// const cytoscapeGraphContainerStyle = style({ height: '300px' });
 
 interface ExperimentInfoDescriptionProps {
   target: string;
   namespace: string;
   experimentDetails: Iter8ExpDetailsInfo;
   experiment: string;
+  duration: number;
   // app: App;
   // miniGraphDataSource: GraphDataSource;
 }
+
+const emptyExperiment: Iter8ExpDetailsInfo = {
+  experimentItem: {
+    name: '',
+    phase: '',
+    status: '',
+    createdAt: '',
+    startedAt: '',
+    endedAt: '',
+    resourceVersion: '',
+    baseline: '',
+    baselinePercentage: 0,
+    candidate: '',
+    candidatePercentage: 0,
+    namespace: '',
+    targetService: '',
+    targetServiceNamespace: '',
+    assessmentConclusion: ''
+  },
+  criterias: []
+};
 
 class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptionProps> {
   serviceLink(namespace: string, workload: string) {
@@ -108,103 +123,115 @@ class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptio
   }
 
   render() {
+    let startTime = 0;
+    let endTime = 0;
+    let timeWindowType = 'Life';
+    if (this.props.experimentDetails != emptyExperiment) {
+      startTime = new Date(this.props.experimentDetails.experimentItem.startedAt).getTime();
+      if (this.props.experimentDetails.experimentItem.endedAt != '') {
+        endTime = new Date(this.props.experimentDetails.experimentItem.endedAt).getTime();
+        timeWindowType = 'Snapshot';
+      }
+    }
     return (
-      <RenderComponentScroll>
-        <Grid gutter="md">
-          <GridItem span={6}>
-            <Card style={{ height: '100%' }}>
-              <CardBody>
-                <DataList aria-label="baseline and candidate">
-                  <DataListItem aria-labelledby="Baseline">
-                    <DataListItemRow>
-                      <DataListItemCells dataListCells={this.serviceInfo()} />
-                      <DataListItemCells
-                        dataListCells={this.serviceLinkCell(this.props.namespace, this.props.target)}
-                      />
-                    </DataListItemRow>
-                  </DataListItem>
+      <Grid gutter="md">
+        <GridItem span={6}>
+          <Card style={{ height: '100%' }}>
+            <CardBody>
+              <DataList aria-label="baseline and candidate">
+                <DataListItem aria-labelledby="Baseline">
+                  <DataListItemRow>
+                    <DataListItemCells dataListCells={this.serviceInfo()} />
+                    <DataListItemCells dataListCells={this.serviceLinkCell(this.props.namespace, this.props.target)} />
+                  </DataListItemRow>
+                </DataListItem>
 
-                  <DataListItem aria-labelledby="Baseline">
-                    <DataListItemRow>
-                      <DataListItemCells
-                        dataListCells={this.baselineInfo(
-                          'Baseline',
-                          this.props.experimentDetails.experimentItem.baseline
-                        )}
-                      />
-                      <DataListItemCells
-                        dataListCells={this.percentageInfo(
-                          'Baseline',
-                          this.props.experimentDetails.experimentItem.baselinePercentage
-                        )}
-                      />
-                    </DataListItemRow>
-                  </DataListItem>
-                  <DataListItem aria-labelledby="Candidate">
-                    <DataListItemRow>
-                      <DataListItemCells
-                        dataListCells={this.baselineInfo(
-                          'Candidate',
-                          this.props.experimentDetails.experimentItem.candidate
-                        )}
-                      />
-                      <DataListItemCells
-                        dataListCells={this.percentageInfo(
-                          'Candidate',
-                          this.props.experimentDetails.experimentItem.candidatePercentage
-                        )}
-                      />
-                    </DataListItemRow>
-                  </DataListItem>
-                </DataList>
+                <DataListItem aria-labelledby="Baseline">
+                  <DataListItemRow>
+                    <DataListItemCells
+                      dataListCells={this.baselineInfo(
+                        'Baseline',
+                        this.props.experimentDetails.experimentItem.baseline
+                      )}
+                    />
+                    <DataListItemCells
+                      dataListCells={this.percentageInfo(
+                        'Baseline',
+                        this.props.experimentDetails.experimentItem.baselinePercentage
+                      )}
+                    />
+                  </DataListItemRow>
+                </DataListItem>
+                <DataListItem aria-labelledby="Candidate">
+                  <DataListItemRow>
+                    <DataListItemCells
+                      dataListCells={this.baselineInfo(
+                        'Candidate',
+                        this.props.experimentDetails.experimentItem.candidate
+                      )}
+                    />
+                    <DataListItemCells
+                      dataListCells={this.percentageInfo(
+                        'Candidate',
+                        this.props.experimentDetails.experimentItem.candidatePercentage
+                      )}
+                    />
+                  </DataListItemRow>
+                </DataListItem>
+              </DataList>
 
-                <Stack>
-                  <StackItem id={'Status'}>
-                    <Text component={TextVariants.h3}> Status: </Text>
-                    {this.props.experimentDetails.experimentItem.status}
-                  </StackItem>
-
-                  <StackItem id={'assessment'}>
-                    <Text component={TextVariants.h3}> Assessment: </Text>
-                    {this.props.experimentDetails.experimentItem.assessmentConclusion}
-                  </StackItem>
-                  <StackItem>
-                    <Grid>
-                      <GridItem span={6}>
-                        <StackItem id={'started_at'}>
-                          <Text component={TextVariants.h3}> Started at </Text>
-                          <LocalTime time={this.props.experimentDetails.experimentItem.startedAt} />
-                        </StackItem>
-                      </GridItem>
-                      <GridItem span={6}>
-                        <StackItem id={'ended_at'}>
-                          <Text component={TextVariants.h3}> Ended at </Text>
-                          <LocalTime time={this.props.experimentDetails.experimentItem.endedAt} />
-                        </StackItem>
-                      </GridItem>
-                    </Grid>
-                  </StackItem>
-                </Stack>
-              </CardBody>
-            </Card>
-          </GridItem>
-          <GridItem span={6}>
-            <Card style={{ height: '100%' }}>
-              <CardBody>
-                <Iter8eMtricsContainer
-                  namespace={this.props.namespace}
-                  object={this.props.target}
-                  objectType={MetricsObjectTypes.ITER8}
-                  direction={'inbound'}
-                />
-              </CardBody>
-              <CardFooter>
-                <CriteriaTable criterias={this.props.experimentDetails.criterias} />
-              </CardFooter>
-            </Card>
-          </GridItem>
-        </Grid>
-      </RenderComponentScroll>
+              <Stack>
+                <StackItem id={'Status'}>
+                  <Text component={TextVariants.h3}> Status: </Text>
+                  {this.props.experimentDetails.experimentItem.status}
+                </StackItem>
+                <StackItem id={'Status'}>
+                  <Text component={TextVariants.h3}> Phase: </Text>
+                  {this.props.experimentDetails.experimentItem.phase}
+                </StackItem>
+                <StackItem id={'assessment'}>
+                  <Text component={TextVariants.h3}> Assessment: </Text>
+                  {this.props.experimentDetails.experimentItem.assessmentConclusion}
+                </StackItem>
+                <StackItem>
+                  <Grid>
+                    <GridItem span={6}>
+                      <StackItem id={'started_at'}>
+                        <Text component={TextVariants.h3}> Started at </Text>
+                        <LocalTime time={this.props.experimentDetails.experimentItem.startedAt} />
+                      </StackItem>
+                    </GridItem>
+                    <GridItem span={6}>
+                      <StackItem id={'ended_at'}>
+                        <Text component={TextVariants.h3}> Ended at </Text>
+                        <LocalTime time={this.props.experimentDetails.experimentItem.endedAt} />
+                      </StackItem>
+                    </GridItem>
+                  </Grid>
+                </StackItem>
+              </Stack>
+            </CardBody>
+          </Card>
+        </GridItem>
+        <GridItem span={6}>
+          <Card style={{ height: '100%' }}>
+            <CardBody>
+              <Iter8MetricsContainer
+                namespace={this.props.namespace}
+                object={this.props.target}
+                objectType={MetricsObjectTypes.ITER8}
+                direction={'inbound'}
+                startTime={startTime}
+                endTime={endTime}
+                timeWindowType={timeWindowType}
+              />
+            </CardBody>
+            <CardFooter>
+              <CriteriaTable criterias={this.props.experimentDetails.criterias} />
+            </CardFooter>
+          </Card>
+        </GridItem>
+      </Grid>
     );
   }
 }

@@ -7,11 +7,11 @@ import { Dashboard, DashboardModel, ExternalLink, Overlay, VCDataPoint } from '@
 import RefreshContainer from '../../components/Refresh/Refresh';
 import * as API from '../../services/Api';
 import { KialiAppState } from '../../store/Store';
-import { TimeRange, evalTimeRange } from '../../types/Common';
+import { TimeRange } from '../../types/Common';
 import { Direction, Reporter } from '../../types/MetricsOptions';
 import * as AlertUtils from '../../utils/AlertUtils';
 import { Iter8MetricsOptions } from '../../types/Iter8';
-
+import { evalTimeRange } from 'types/Common';
 import * as MetricsHelper from './Helper';
 import { MetricsSettings, LabelsSettings } from '../MetricsOptions/MetricsSettings';
 import MetricsReporter from '../MetricsOptions/MetricsReporter';
@@ -22,6 +22,8 @@ import { MessageType } from '../../types/MessageCenter';
 import { SpanOverlay } from './SpanOverlay';
 import TimeRangeComponent from 'components/Time/TimeRangeComponent';
 import { retrieveTimeRange, storeBounds } from 'components/Time/TimeRangeHelper';
+import { ToolbarDropdown } from '../ToolbarDropdown/ToolbarDropdown';
+import { style } from 'typestyle';
 
 type MetricsState = {
   dashboard?: DashboardModel;
@@ -29,6 +31,8 @@ type MetricsState = {
   grafanaLinks: ExternalLink[];
   spanOverlay?: Overlay;
   timeRange: TimeRange;
+  timeWindow?: Date[];
+  metricTypeInfo?: string;
 };
 
 type ObjectId = {
@@ -40,11 +44,24 @@ type Iter8MetricsProps = ObjectId &
   RouteComponentProps<{}> & {
     objectType: MetricsObjectTypes;
     direction: Direction;
+    startTime: number;
+    endTime: number;
+    timeWindowType: string;
   };
 
 type Props = Iter8MetricsProps & {
   // Redux props
   jaegerIntegration: boolean;
+};
+
+const displayFlex = style({
+  display: 'flex',
+  marginTop: '5px'
+});
+
+const metricTypes: { [key: string]: string } = {
+  SnapShot: 'SnapShot',
+  Life: 'Life'
 };
 
 class Iter8Metrics extends React.Component<Props, MetricsState> {
@@ -73,7 +90,6 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
   }
 
   componentDidMount() {
-    this.fetchGrafanaInfo();
     this.refresh();
   }
 
@@ -93,6 +109,14 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
     MetricsHelper.timeRangeToOptions(this.state.timeRange, this.options);
     let promise: Promise<API.Response<DashboardModel>>;
     this.options.byLabels = ['destination_version'];
+    this.options.charts = 'request_count';
+    if (this.props.endTime != 0) {
+      this.options.startTime = this.props.startTime;
+      this.options.endTime = this.props.endTime;
+      this.options.timeWindowType = 'SnapShot';
+    } else {
+      this.options.timeWindowType = 'Life';
+    }
     promise = API.getIter8Dashboard(this.props.namespace, this.props.object, this.options);
 
     return promise
@@ -173,6 +197,36 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
     }
   }
 
+  iter8EvalTimeRange = (from, to): [Date, Date] => {
+    return [new Date(from), to ? new Date(to) : new Date()];
+  };
+
+  private setTimeWindow = (timeWindowType: string) => {
+    if (timeWindowType == 'SnapShot') {
+      // const timeWindow  = this.iter8EvalTimeRange(this.props.startTime, this.props.endTime)
+      this.setState(
+        {
+          timeWindow: this.iter8EvalTimeRange(this.props.startTime, this.props.endTime),
+          metricTypeInfo: timeWindowType
+        },
+        () => {
+          this.refresh();
+        }
+      );
+    } else {
+      // const timeWindow = this.iter8EvalTimeRange(retrieveTimeRange() || MetricsHelper.defaultMetricsDuration)
+      this.setState(
+        {
+          timeWindow: evalTimeRange(retrieveTimeRange() || MetricsHelper.defaultMetricsDuration),
+          metricTypeInfo: timeWindowType
+        },
+        () => {
+          this.refresh();
+        }
+      );
+    }
+  };
+
   render() {
     if (!this.state.dashboard) {
       return this.renderOptionsBar();
@@ -180,6 +234,9 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
 
     const urlParams = new URLSearchParams(history.location.search);
     const expandedChart = urlParams.get('expand') || undefined;
+    // const timeWindow = evalTimeRange(retrieveTimeRange() || MetricsHelper.defaultMetricsDuration)
+
+    const timeWindow = this.iter8EvalTimeRange(this.props.startTime, this.props.endTime);
 
     return (
       <>
@@ -192,7 +249,7 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
           onClick={this.onClickDataPoint}
           labelPrettifier={MetricsHelper.prettyLabelValues}
           overlay={this.state.spanOverlay}
-          timeWindow={evalTimeRange(retrieveTimeRange() || MetricsHelper.defaultMetricsDuration)}
+          timeWindow={timeWindow}
           brushHandlers={{ onDomainChangeEnd: (_, props) => this.onDomainChange(props.currentDomain.x) }}
         />
       </>
@@ -203,6 +260,17 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
     return (
       <Toolbar style={{ paddingBottom: 8 }}>
         <ToolbarGroup style={{ marginLeft: 'auto', marginRight: 0 }}>
+          <ToolbarItem className={displayFlex}>
+            <ToolbarDropdown
+              id={'iter8_mtype'}
+              nameDropdown="&nbsp;&nbsp;Metric Type"
+              tooltip="Display logs for the selected Metric"
+              handleSelect={key => this.setTimeWindow(key)}
+              value={this.state.metricTypeInfo}
+              label={this.state.metricTypeInfo}
+              options={metricTypes}
+            />
+          </ToolbarItem>
           <ToolbarItem>
             <TimeRangeComponent
               range={this.state.timeRange}

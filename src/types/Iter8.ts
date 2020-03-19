@@ -70,6 +70,10 @@ export interface Iter8MetricsOptions extends MetricsQuery {
   filters?: string[];
   requestProtocol?: string;
   reporter: Reporter;
+  charts?: string;
+  startTime?: number;
+  endTime?: number;
+  timeWindowType?: string;
 }
 
 export type Reporter = 'source' | 'destination';

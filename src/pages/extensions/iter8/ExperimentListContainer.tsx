@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { RenderContent } from '../../../components/Nav/Page';
 import {
   Dropdown,
   DropdownItem,
@@ -7,7 +6,8 @@ import {
   DropdownToggle,
   Title,
   Toolbar,
-  ToolbarSection
+  ToolbarSection,
+  Tooltip
 } from '@patternfly/react-core';
 import { style } from 'typestyle';
 import { PfColors } from '../../../components/Pf/PfColors';
@@ -30,6 +30,7 @@ import { PromisesRegistry } from '../../../utils/CancelablePromises';
 import { namespaceEquals } from '../../../utils/Common';
 import { DurationInSeconds } from '../../../types/Common';
 import { ServiceListItem } from '../../../types/ServiceList';
+import { KialiIcon } from '../../../config/KialiIcon';
 // Style constants
 const containerPadding = style({ padding: '20px 20px 20px 20px' });
 const containerWhite = style({ backgroundColor: PfColors.White });
@@ -59,6 +60,10 @@ interface State extends FilterComponent.State<Iter8Experiment> {
   sortBy: ISortBy; // ?? not used yet
   dropdownOpen: boolean;
 }
+
+const statusIconStyle = style({
+  fontSize: '2.0em'
+});
 
 const columns = [
   {
@@ -266,7 +271,42 @@ class ExperimentListPage extends FilterComponent.Component<ExperimentListCompone
             </Link>
           </>,
           <>{h.targetService}</>,
-          <>{h.phase}</>,
+          <>
+            {(() => {
+              switch (h.phase) {
+                case 'Initializing':
+                  return (
+                    <Tooltip content={<>{h.phase}</>}>
+                      <KialiIcon.PendingIcon className={statusIconStyle} />
+                    </Tooltip>
+                  );
+                case 'Progressing':
+                  return (
+                    <Tooltip content={<>{h.phase}</>}>
+                      <KialiIcon.InProgress className={statusIconStyle} />
+                    </Tooltip>
+                  );
+                case 'Pause':
+                  return (
+                    <Tooltip content={<>{h.phase}</>}>
+                      <KialiIcon.PauseCircle className={statusIconStyle} />
+                    </Tooltip>
+                  );
+                case 'Completed':
+                  return (
+                    <Tooltip content={<>{h.phase}</>}>
+                      <KialiIcon.Ok className={statusIconStyle} />
+                    </Tooltip>
+                  );
+                default:
+                  return (
+                    <Tooltip content={<>{h.phase}</>}>
+                      <KialiIcon.InProgress className={statusIconStyle} />
+                    </Tooltip>
+                  );
+              }
+            })()}
+          </>,
           <>{h.status}</>,
           <>
             {h.baseline} <br /> {h.baselinePercentage}%
@@ -285,15 +325,18 @@ class ExperimentListPage extends FilterComponent.Component<ExperimentListCompone
     return (
       <>
         {pageTitle}
-        <RenderContent>
-          <div className={containerPadding}>
-            {this.toolbar()}
-            <Table aria-label="Sortable Table" sortBy={this.state.sortBy} cells={columns} rows={this.rows()}>
-              <TableHeader />
-              <TableBody />
-            </Table>
-          </div>
-        </RenderContent>
+        {this.toolbar()}
+        <div
+          style={{
+            padding: '20px',
+            marginBottom: '20px'
+          }}
+        >
+          <Table aria-label="Sortable Table" sortBy={this.state.sortBy} cells={columns} rows={this.rows()}>
+            <TableHeader />
+            <TableBody />
+          </Table>
+        </div>
       </>
     );
   }

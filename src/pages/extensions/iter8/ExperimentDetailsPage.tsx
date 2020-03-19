@@ -31,6 +31,7 @@ import RefreshButtonContainer from '../../../components/Refresh/RefreshButton';
 import RefreshContainer from '../../../components/Refresh/Refresh';
 // import GraphDataSource from '../../../services/GraphDataSource';
 import { App } from '../../../types/App';
+import * as FilterHelper from '../../../components/FilterList/FilterHelper';
 
 type ExpDetailsState = {
   iter8Info: Iter8Info;
@@ -129,13 +130,14 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
 
     if (currentTab === defaultTab) {
       this.setState(prevState => {
+        this.fetchExperiment();
         return {
           iter8Info: prevState.iter8Info,
-          expDetailsInfo: emptyExperiment,
+          expDetailsInfo: prevState.expDetailsInfo,
           currentTab: currentTab
         };
       });
-      this.fetchExperiment();
+
       // this.fetchApp();
     }
 
@@ -217,16 +219,21 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
               target={this.props.match.params.name}
               experimentDetails={this.state.expDetailsInfo}
               experiment={this.props.match.params.experiment}
+              duration={FilterHelper.currentDuration()}
             />
           </Tab>
         );
         break;
       case criteriaTab:
-        component = (
-          <Tab title="Criteria" eventKey={0} key={'Criteria'}>
-            <CriteriaInfoDescription criterias={this.state.expDetailsInfo.criterias} />
-          </Tab>
-        );
+        if (this.state.expDetailsInfo.criterias.length > 0) {
+          component = (
+            <Tab title="Criteria" eventKey={0} key={'Criteria'}>
+              <CriteriaInfoDescription criterias={this.state.expDetailsInfo.criterias} />
+            </Tab>
+          );
+        } else {
+          component = <Tab title="Criteria" eventKey={0} key={'Criteria'} />;
+        }
         break;
 
       default:
@@ -278,6 +285,7 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
           experiment={this.props.match.params.experiment}
           target={this.props.match.params.name}
           experimentDetails={this.state.expDetailsInfo}
+          duration={FilterHelper.currentDuration()}
         />
       </Tab>
     );
