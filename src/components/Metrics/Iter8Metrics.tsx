@@ -1,14 +1,14 @@
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
-import { Toolbar, ToolbarGroup, ToolbarItem } from '@patternfly/react-core';
+import { Text, TextVariants, Toolbar, ToolbarGroup, ToolbarItem } from '@patternfly/react-core';
 import { Dashboard, DashboardModel, ExternalLink, Overlay, VCDataPoint } from '@kiali/k-charted-pf4';
 
 import RefreshContainer from '../../components/Refresh/Refresh';
 import * as API from '../../services/Api';
 import { KialiAppState } from '../../store/Store';
 import { TimeRange } from '../../types/Common';
-import { Direction, Reporter } from '../../types/MetricsOptions';
+import { Direction } from '../../types/MetricsOptions';
 import * as AlertUtils from '../../utils/AlertUtils';
 import { Iter8MetricsOptions } from '../../types/Iter8';
 import { evalTimeRange } from 'types/Common';
@@ -160,20 +160,11 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
       });
   }
 
-  onLabelsFiltersChanged = (labelsFilters: LabelsSettings) => {
-    this.setState({ labelsSettings: labelsFilters });
-  };
-
   onTimeFrameChanged = (range: TimeRange) => {
     this.setState({ timeRange: range }, () => {
       this.spanOverlay.resetLastFetchTime();
       this.refresh();
     });
-  };
-
-  onReporterChanged = (reporter: Reporter) => {
-    this.options.reporter = reporter;
-    this.fetchMetrics();
   };
 
   onClickDataPoint = (_, datum: VCDataPoint) => {
@@ -237,9 +228,22 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
     // const timeWindow = evalTimeRange(retrieveTimeRange() || MetricsHelper.defaultMetricsDuration)
 
     const timeWindow = this.iter8EvalTimeRange(this.props.startTime, this.props.endTime);
+    const warningMessage = this.state.dashboard.charts.map(chart => {
+      if (chart.metric !== undefined) {
+        if (chart.metric.length == 0) {
+          return (
+            <>
+              <Text component={TextVariants.h4}>Prometeus data not available for the time range</Text>
+            </>
+          );
+        }
+      }
+      return '';
+    });
 
     return (
       <>
+        <Text component={TextVariants.h4}>{warningMessage}</Text>
         {this.renderOptionsBar()}
         <Dashboard
           dashboard={this.state.dashboard}

@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { RenderContent } from '../../../components/Nav/Page';
 
 import { Link, RouteComponentProps } from 'react-router-dom';
 
@@ -17,8 +16,6 @@ import {
   DropdownPosition,
   DropdownToggle,
   Tab,
-  Text,
-  TextVariants,
   Toolbar,
   ToolbarSection
 } from '@patternfly/react-core';
@@ -28,10 +25,12 @@ import { style } from 'typestyle';
 import { PfColors } from '../../../components/Pf/PfColors';
 import history from '../../../app/History';
 import RefreshButtonContainer from '../../../components/Refresh/RefreshButton';
-import RefreshContainer from '../../../components/Refresh/Refresh';
+// import RefreshContainer from '../../../components/Refresh/Refresh';
 // import GraphDataSource from '../../../services/GraphDataSource';
 import { App } from '../../../types/App';
 import * as FilterHelper from '../../../components/FilterList/FilterHelper';
+// import BreadcrumbView from '../../../components/BreadcrumbView/BreadcrumbView';
+// import PfTitle from '../../../components/Pf/PfTitle';
 
 type ExpDetailsState = {
   iter8Info: Iter8Info;
@@ -41,11 +40,11 @@ type ExpDetailsState = {
   dropdownOpen: boolean;
 };
 
-interface Props {
+type Props = RouteComponentProps<{}> & {
   namespace: string;
   name: string;
   experiment: string;
-}
+};
 
 const containerWhite = style({ backgroundColor: PfColors.White });
 const paddingLeft = style({ paddingLeft: '20px' });
@@ -137,8 +136,6 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
           currentTab: currentTab
         };
       });
-
-      // this.fetchApp();
     }
 
     if (currentTab === criteriaTab) {
@@ -155,10 +152,14 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
           </BreadcrumbItem>
           <BreadcrumbItem isActive={true}>{title}</BreadcrumbItem>
         </Breadcrumb>
-        <Text component={TextVariants.h3}>{title}</Text>
       </div>
     </>
   );
+
+  // Invoke the history object to update and URL and start a routing
+  goExperimentsPage = () => {
+    history.push('/extensions/iter8/list');
+  };
 
   fetchExperiment = () => {
     API.getIter8Info()
@@ -197,43 +198,23 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
       });
   };
 
-  // Invoke the history object to update and URL and start a routing
-  goIter8Page = () => {
-    history.push('/extensions/iter8');
-  };
-
-  handleTabClick = (_, tabIndex) => {
-    this.setState({
-      currentTab: tabIndex
-    });
-  };
-
-  renderActions() {
+  renderActions = () => {
     let component;
     switch (this.state.currentTab) {
       case defaultTab:
         component = (
-          <Tab title="Overview" eventKey={0} key={'Overview'}>
-            <ExperimentInfoDescription
-              namespace={this.props.match.params.namespace}
-              target={this.props.match.params.name}
-              experimentDetails={this.state.expDetailsInfo}
-              experiment={this.props.match.params.experiment}
-              duration={FilterHelper.currentDuration()}
-            />
-          </Tab>
+          <Dropdown
+            id="actions"
+            title="Actions"
+            toggle={
+              <DropdownToggle onToggle={toggle => this.setState({ dropdownOpen: toggle })}>Actions</DropdownToggle>
+            }
+            onSelect={() => this.setState({ dropdownOpen: !this.state.dropdownOpen })}
+            position={DropdownPosition.right}
+            isOpen={this.state.dropdownOpen}
+            dropdownItems={[<DropdownItem>Rollback</DropdownItem>, <DropdownItem>Rollforward</DropdownItem>]}
+          />
         );
-        break;
-      case criteriaTab:
-        if (this.state.expDetailsInfo.criterias.length > 0) {
-          component = (
-            <Tab title="Criteria" eventKey={0} key={'Criteria'}>
-              <CriteriaInfoDescription criterias={this.state.expDetailsInfo.criterias} />
-            </Tab>
-          );
-        } else {
-          component = <Tab title="Criteria" eventKey={0} key={'Criteria'} />;
-        }
         break;
 
       default:
@@ -242,14 +223,11 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
     return (
       <span style={{ position: 'absolute', right: '50px', zIndex: 1 }}>
         {component}
-        {this.state.currentTab !== criteriaTab ? (
-          <RefreshButtonContainer handleRefresh={this.doRefresh} />
-        ) : (
-          <RefreshContainer id="metrics-refresh" handleRefresh={this.doRefresh} hideLabel={true} />
-        )}
+        <RefreshButtonContainer handleRefresh={this.doRefresh} />
+        &nbsp;
       </span>
     );
-  }
+  };
 
   actionsToolbar = () => {
     return (
@@ -301,40 +279,26 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
     return (
       <>
         {this.pageTitle(title)}
-        <RenderContent>
-          <div>
-            {this.toolbar()}
+        {this.renderActions()}
 
-            <ParameterizedTabs
-              id="basic-tabs"
-              onSelect={tabValue => {
-                this.setState({ currentTab: tabValue });
-              }}
-              tabMap={tabIndex}
-              tabName={tabName}
-              defaultTab={defaultTab}
-              postHandler={this.fetchExperiment}
-              activeTab={this.state.currentTab}
-              mountOnEnter={false}
-              unmountOnExit={true}
-            >
-              {tabsArray}
-            </ParameterizedTabs>
-          </div>
-        </RenderContent>
+        <ParameterizedTabs
+          id="basic-tabs"
+          onSelect={tabValue => {
+            this.setState({ currentTab: tabValue });
+          }}
+          tabMap={tabIndex}
+          tabName={tabName}
+          defaultTab={defaultTab}
+          postHandler={this.fetchExperiment}
+          activeTab={this.state.currentTab}
+          mountOnEnter={false}
+          unmountOnExit={true}
+        >
+          {tabsArray}
+        </ParameterizedTabs>
       </>
     );
   }
-
-  fetchApp = () => {
-    API.getApp(this.props.match.params.namespace, this.props.match.params.name)
-      .then(details => {
-        this.setState({ app: details.data });
-      })
-      .catch(error => {
-        AlertUtils.addError('Could not fetch App Details.', error);
-      });
-  };
 }
 
 export default ExperimentDetailsPage;
