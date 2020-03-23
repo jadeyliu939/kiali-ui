@@ -1,7 +1,7 @@
-import { ActiveFilter, FilterType, FILTER_ACTION_APPEND } from '../../types/Filters';
-import { getRequestErrorsStatus, WithServiceHealth } from '../../types/Health';
+import { ActiveFilter, FilterType, FILTER_ACTION_APPEND, FilterTypes } from '../../types/Filters';
+import { getRequestErrorsStatus, WithServiceHealth, hasHealth } from '../../types/Health';
 import { ServiceListItem } from '../../types/ServiceList';
-import { GenericSortField, HealthSortField } from '../../types/SortFilters';
+import { SortField } from '../../types/SortFilters';
 import {
   istioSidecarFilter,
   healthFilter,
@@ -11,8 +11,9 @@ import {
 } from '../../components/Filters/CommonFilters';
 import { hasMissingSidecar } from '../../components/VirtualList/Config';
 import { TextInputTypes } from '@patternfly/react-core';
+import { LabelFilters } from '../../components/Filters/LabelFilter';
 
-export const sortFields: GenericSortField<ServiceListItem>[] = [
+export const sortFields: SortField<ServiceListItem>[] = [
   {
     id: 'namespace',
     title: 'Namespace',
@@ -68,20 +69,24 @@ export const sortFields: GenericSortField<ServiceListItem>[] = [
     title: 'Health',
     isNumeric: false,
     param: 'he',
-    compare: (a: WithServiceHealth<ServiceListItem>, b: WithServiceHealth<ServiceListItem>) => {
-      const statusForA = a.health.getGlobalStatus();
-      const statusForB = b.health.getGlobalStatus();
+    compare: (a, b) => {
+      if (hasHealth(a) && hasHealth(b)) {
+        const statusForA = a.health.getGlobalStatus();
+        const statusForB = b.health.getGlobalStatus();
 
-      if (statusForA.priority === statusForB.priority) {
-        // If both services have same health status, use error rate to determine order.
-        const ratioA = getRequestErrorsStatus(a.health.requests.errorRatio).value;
-        const ratioB = getRequestErrorsStatus(b.health.requests.errorRatio).value;
-        return ratioA === ratioB ? a.name.localeCompare(b.name) : ratioB - ratioA;
+        if (statusForA.priority === statusForB.priority) {
+          // If both services have same health status, use error rate to determine order.
+          const ratioA = getRequestErrorsStatus(a.health.requests.errorRatio).value;
+          const ratioB = getRequestErrorsStatus(b.health.requests.errorRatio).value;
+          return ratioA === ratioB ? a.name.localeCompare(b.name) : ratioB - ratioA;
+        }
+
+        return statusForB.priority - statusForA.priority;
+      } else {
+        return 0;
       }
-
-      return statusForB.priority - statusForA.priority;
     }
-  } as HealthSortField<ServiceListItem>,
+  },
   {
     id: 'configvalidation',
     title: 'Config',
@@ -121,7 +126,17 @@ const serviceNameFilter: FilterType = {
   filterValues: []
 };
 
-export const availableFilters: FilterType[] = [serviceNameFilter, istioSidecarFilter, healthFilter];
+const labelFilter: FilterType = {
+  id: 'label',
+  title: 'Label',
+  placeholder: 'Filter by Label',
+  filterType: FilterTypes.custom,
+  customComponent: LabelFilters,
+  action: FILTER_ACTION_APPEND,
+  filterValues: []
+};
+
+export const availableFilters: FilterType[] = [serviceNameFilter, istioSidecarFilter, healthFilter, labelFilter];
 
 const filterByIstioSidecar = (items: ServiceListItem[], istioSidecar: boolean): ServiceListItem[] => {
   return items.filter(item => item.istioSidecar === istioSidecar);
@@ -143,6 +158,31 @@ const filterByName = (items: ServiceListItem[], names: string[]): ServiceListIte
   });
 };
 
+const filterByLabel = (items: ServiceListItem[], filter: string[]): ServiceListItem[] => {
+  let result: ServiceListItem[] = [];
+
+  filter.map(filter => {
+    if (filter.includes('=')) {
+      const values = filter.split('=');
+      // Check Values
+      values[1]
+        .split(',')
+        .map(
+          val =>
+            (result = result.concat(
+              items.filter(item => values[0] in item.labels && item.labels[values[0]].startsWith(val))
+            ))
+        );
+    } else {
+      // Check if has Label
+      result = result.concat(items.filter(item => Object.keys(item.labels).some(key => key.startsWith(filter))));
+    }
+    return null;
+  });
+
+  return filter.length > 0 ? result : items;
+};
+
 export const filterBy = (
   items: ServiceListItem[],
   filters: ActiveFilter[]
@@ -158,6 +198,10 @@ export const filterBy = (
     ret = filterByName(ret, serviceNamesSelected);
   }
 
+  const serviceFilterSelected = getFilterSelectedValues(labelFilter, filters);
+  if (serviceFilterSelected.length > 0) {
+    ret = filterByLabel(ret, serviceFilterSelected);
+  }
   // We may have to perform a second round of filtering, using data fetched asynchronously (health)
   // If not, exit fast
   const healthSelected = getFilterSelectedValues(healthFilter, filters);
@@ -170,7 +214,7 @@ export const filterBy = (
 // Exported for test
 export const sortServices = (
   services: ServiceListItem[],
-  sortField: GenericSortField<ServiceListItem>,
+  sortField: SortField<ServiceListItem>,
   isAscending: boolean
 ): Promise<ServiceListItem[]> => {
   if (sortField.title === 'Health') {

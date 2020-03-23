@@ -29,6 +29,7 @@ describe('WorkloadDescription', () => {
         miniGraphDataSource={miniGraphDS}
       />
     );
+    expect(wrapper).toBeDefined();
     expect(shallowToJson(wrapper)).toMatchSnapshot();
   });
 

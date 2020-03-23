@@ -1,7 +1,7 @@
 import { ActiveFilter, FILTER_ACTION_APPEND, FILTER_ACTION_UPDATE, FilterType, FilterTypes } from '../../types/Filters';
 import { WorkloadListItem, WorkloadType } from '../../types/Workload';
-import { GenericSortField, HealthSortField } from '../../types/SortFilters';
-import { getRequestErrorsStatus, WithWorkloadHealth } from '../../types/Health';
+import { SortField } from '../../types/SortFilters';
+import { getRequestErrorsStatus, WithWorkloadHealth, hasHealth } from '../../types/Health';
 import {
   presenceValues,
   istioSidecarFilter,
@@ -10,10 +10,11 @@ import {
   getPresenceFilterValue,
   filterByHealth
 } from '../../components/Filters/CommonFilters';
+import { LabelFilters } from '../../components/Filters/LabelFilter';
 import { hasMissingSidecar } from '../../components/VirtualList/Config';
 import { TextInputTypes } from '@patternfly/react-core';
 
-export const sortFields: GenericSortField<WorkloadListItem>[] = [
+export const sortFields: SortField<WorkloadListItem>[] = [
   {
     id: 'namespace',
     title: 'Namespace',
@@ -133,20 +134,24 @@ export const sortFields: GenericSortField<WorkloadListItem>[] = [
     title: 'Health',
     isNumeric: false,
     param: 'he',
-    compare: (a: WithWorkloadHealth<WorkloadListItem>, b: WithWorkloadHealth<WorkloadListItem>) => {
-      const statusForA = a.health.getGlobalStatus();
-      const statusForB = b.health.getGlobalStatus();
+    compare: (a, b) => {
+      if (hasHealth(a) && hasHealth(b)) {
+        const statusForA = a.health.getGlobalStatus();
+        const statusForB = b.health.getGlobalStatus();
 
-      if (statusForA.priority === statusForB.priority) {
-        // If both workloads have same health status, use error rate to determine order.
-        const ratioA = getRequestErrorsStatus(a.health.requests.errorRatio).value;
-        const ratioB = getRequestErrorsStatus(b.health.requests.errorRatio).value;
-        return ratioA === ratioB ? a.name.localeCompare(b.name) : ratioB - ratioA;
+        if (statusForA.priority === statusForB.priority) {
+          // If both workloads have same health status, use error rate to determine order.
+          const ratioA = getRequestErrorsStatus(a.health.requests.errorRatio).value;
+          const ratioB = getRequestErrorsStatus(b.health.requests.errorRatio).value;
+          return ratioA === ratioB ? a.name.localeCompare(b.name) : ratioB - ratioA;
+        }
+
+        return statusForB.priority - statusForA.priority;
+      } else {
+        return 0;
       }
-
-      return statusForB.priority - statusForA.priority;
     }
-  } as HealthSortField<WorkloadListItem>
+  }
 ];
 
 const workloadNameFilter: FilterType = {
@@ -174,6 +179,16 @@ const versionLabelFilter: FilterType = {
   filterType: FilterTypes.select,
   action: FILTER_ACTION_UPDATE,
   filterValues: presenceValues
+};
+
+const labelFilter: FilterType = {
+  id: 'label',
+  title: 'Label',
+  placeholder: 'Filter by Label',
+  filterType: FilterTypes.custom,
+  customComponent: LabelFilters,
+  action: FILTER_ACTION_APPEND,
+  filterValues: []
 };
 
 const workloadTypeFilter: FilterType = {
@@ -228,7 +243,8 @@ export const availableFilters: FilterType[] = [
   istioSidecarFilter,
   healthFilter,
   appLabelFilter,
-  versionLabelFilter
+  versionLabelFilter,
+  labelFilter
 ];
 
 /** Filter Method */
@@ -248,7 +264,7 @@ const filterByType = (items: WorkloadListItem[], filter: string[]): WorkloadList
   return items.filter(item => includeName(item.type, filter));
 };
 
-const filterByLabel = (
+const filterByLabelPresence = (
   items: WorkloadListItem[],
   istioSidecar: boolean | undefined,
   app: boolean | undefined,
@@ -267,6 +283,31 @@ const filterByLabel = (
   return result;
 };
 
+const filterByLabel = (items: WorkloadListItem[], filter: string[]): WorkloadListItem[] => {
+  let result: WorkloadListItem[] = [];
+
+  filter.map(filter => {
+    if (filter.includes('=')) {
+      const values = filter.split('=');
+      // Check Values
+      values[1]
+        .split(',')
+        .map(
+          val =>
+            (result = result.concat(
+              items.filter(item => values[0] in item.labels && item.labels[values[0]].startsWith(val))
+            ))
+        );
+    } else {
+      // Check if has Label
+      result = result.concat(items.filter(item => Object.keys(item.labels).some(key => key.startsWith(filter))));
+    }
+    return null;
+  });
+
+  return filter.length > 0 ? result : items;
+};
+
 const filterByName = (items: WorkloadListItem[], names: string[]): WorkloadListItem[] => {
   if (names.length === 0) {
     return items;
@@ -283,11 +324,13 @@ export const filterBy = (
   const istioSidecar = getPresenceFilterValue(istioSidecarFilter, filters);
   const appLabel = getPresenceFilterValue(appLabelFilter, filters);
   const versionLabel = getPresenceFilterValue(versionLabelFilter, filters);
+  const labelFilters = getFilterSelectedValues(labelFilter, filters);
 
   let ret = items;
   ret = filterByType(ret, workloadTypeFilters);
   ret = filterByName(ret, workloadNamesSelected);
-  ret = filterByLabel(ret, istioSidecar, appLabel, versionLabel);
+  ret = filterByLabelPresence(ret, istioSidecar, appLabel, versionLabel);
+  ret = filterByLabel(ret, labelFilters);
 
   // We may have to perform a second round of filtering, using data fetched asynchronously (health)
   // If not, exit fast
@@ -302,7 +345,7 @@ export const filterBy = (
 
 export const sortWorkloadsItems = (
   unsorted: WorkloadListItem[],
-  sortField: GenericSortField<WorkloadListItem>,
+  sortField: SortField<WorkloadListItem>,
   isAscending: boolean
 ): Promise<WorkloadListItem[]> => {
   if (sortField.title === 'Health') {

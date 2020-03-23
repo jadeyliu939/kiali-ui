@@ -4,6 +4,7 @@ import { Button, ButtonVariant, InputGroupText, TextInput } from '@patternfly/re
 import Boundaries from './Boundaries';
 import { style } from 'typestyle';
 import { MinusIcon, PlusIcon, ThumbTackIcon } from '@patternfly/react-icons';
+import './styles/default.css';
 
 export const noop = Function.prototype;
 
@@ -141,7 +142,7 @@ class Slider extends React.Component<Props, State> {
       marginRight: 5
     });
     const inputStyle = style({
-      width: '2.75em',
+      width: '3em',
       textAlign: 'center',
       marginLeft: 0,
       marginRight: 0

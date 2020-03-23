@@ -1,7 +1,7 @@
-import { ActiveFilter, FILTER_ACTION_APPEND, FilterType } from '../../types/Filters';
+import { ActiveFilter, FILTER_ACTION_APPEND, FilterType, FilterTypes } from '../../types/Filters';
 import { AppListItem } from '../../types/AppList';
-import { GenericSortField, HealthSortField } from '../../types/SortFilters';
-import { getRequestErrorsStatus, WithAppHealth } from '../../types/Health';
+import { SortField } from '../../types/SortFilters';
+import { getRequestErrorsStatus, WithAppHealth, hasHealth } from '../../types/Health';
 import {
   istioSidecarFilter,
   healthFilter,
@@ -11,8 +11,9 @@ import {
 } from '../../components/Filters/CommonFilters';
 import { hasMissingSidecar } from '../../components/VirtualList/Config';
 import { TextInputTypes } from '@patternfly/react-core';
+import { LabelFilters } from '../../components/Filters/LabelFilter';
 
-export const sortFields: GenericSortField<AppListItem>[] = [
+export const sortFields: SortField<AppListItem>[] = [
   {
     id: 'namespace',
     title: 'Namespace',
@@ -54,20 +55,24 @@ export const sortFields: GenericSortField<AppListItem>[] = [
     title: 'Health',
     isNumeric: false,
     param: 'he',
-    compare: (a: WithAppHealth<AppListItem>, b: WithAppHealth<AppListItem>) => {
-      const statusForA = a.health.getGlobalStatus();
-      const statusForB = b.health.getGlobalStatus();
+    compare: (a, b) => {
+      if (hasHealth(a) && hasHealth(b)) {
+        const statusForA = a.health.getGlobalStatus();
+        const statusForB = b.health.getGlobalStatus();
 
-      if (statusForA.priority === statusForB.priority) {
-        // If both apps have same health status, use error rate to determine order.
-        const ratioA = getRequestErrorsStatus(a.health.requests.errorRatio).value;
-        const ratioB = getRequestErrorsStatus(b.health.requests.errorRatio).value;
-        return ratioA === ratioB ? a.name.localeCompare(b.name) : ratioB - ratioA;
+        if (statusForA.priority === statusForB.priority) {
+          // If both apps have same health status, use error rate to determine order.
+          const ratioA = getRequestErrorsStatus(a.health.requests.errorRatio).value;
+          const ratioB = getRequestErrorsStatus(b.health.requests.errorRatio).value;
+          return ratioA === ratioB ? a.name.localeCompare(b.name) : ratioB - ratioA;
+        }
+
+        return statusForB.priority - statusForA.priority;
+      } else {
+        return 0;
       }
-
-      return statusForB.priority - statusForA.priority;
     }
-  } as HealthSortField<AppListItem>
+  }
 ];
 
 const appNameFilter: FilterType = {
@@ -79,7 +84,17 @@ const appNameFilter: FilterType = {
   filterValues: []
 };
 
-export const availableFilters: FilterType[] = [appNameFilter, istioSidecarFilter, healthFilter];
+const labelFilter: FilterType = {
+  id: 'label',
+  title: 'Label',
+  placeholder: 'Filter by Label',
+  filterType: FilterTypes.custom,
+  customComponent: LabelFilters,
+  action: FILTER_ACTION_APPEND,
+  filterValues: []
+};
+
+export const availableFilters: FilterType[] = [appNameFilter, istioSidecarFilter, healthFilter, labelFilter];
 
 /** Filter Method */
 
@@ -103,6 +118,35 @@ const filterByIstioSidecar = (items: AppListItem[], istioSidecar: boolean): AppL
   return items.filter(item => item.istioSidecar === istioSidecar);
 };
 
+const filterByLabel = (items: AppListItem[], filter: string[]): AppListItem[] => {
+  let result: AppListItem[] = [];
+
+  filter.map(filter => {
+    if (filter.includes('=')) {
+      const values = filter.split('=');
+      // Check Values
+      values[1].split(',').map(
+        val =>
+          (result = result.concat(
+            items.filter(item => {
+              if (values[0] in item.labels) {
+                return item.labels[values[0]].split(',').some(appVal => appVal.startsWith(val));
+              } else {
+                return false;
+              }
+            })
+          ))
+      );
+    } else {
+      // Check if has Label
+      result = result.concat(items.filter(item => Object.keys(item.labels).some(key => key.startsWith(filter))));
+    }
+    return null;
+  });
+
+  return filter.length > 0 ? result : items;
+};
+
 export const filterBy = (appsList: AppListItem[], filters: ActiveFilter[]): Promise<AppListItem[]> | AppListItem[] => {
   let ret = appsList;
   const istioSidecar = getPresenceFilterValue(istioSidecarFilter, filters);
@@ -113,6 +157,11 @@ export const filterBy = (appsList: AppListItem[], filters: ActiveFilter[]): Prom
   const appNamesSelected = getFilterSelectedValues(appNameFilter, filters);
   if (appNamesSelected.length > 0) {
     ret = filterByName(ret, appNamesSelected);
+  }
+
+  const appLabelsSelected = getFilterSelectedValues(labelFilter, filters);
+  if (appLabelsSelected.length > 0) {
+    ret = filterByLabel(ret, appLabelsSelected);
   }
 
   // We may have to perform a second round of filtering, using data fetched asynchronously (health)
@@ -128,7 +177,7 @@ export const filterBy = (appsList: AppListItem[], filters: ActiveFilter[]): Prom
 
 export const sortAppsItems = (
   unsorted: AppListItem[],
-  sortField: GenericSortField<AppListItem>,
+  sortField: SortField<AppListItem>,
   isAscending: boolean
 ): Promise<AppListItem[]> => {
   if (sortField.title === 'Health') {

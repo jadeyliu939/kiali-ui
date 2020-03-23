@@ -23,17 +23,25 @@ exports[`WorkloadDescription should render with runtimes 1`] = `
           Workload Overview
            
         </Title>
-        <Stack>
+        <Stack
+          gutter="md"
+          style={
+            Object {
+              "marginTop": "10px",
+            }
+          }
+        >
           <StackItem
             id="labels"
           >
-            <Text
-              component="h3"
+            <Title
+              headingLevel="h6"
+              size="md"
             >
                
               Labels
                
-            </Text>
+            </Title>
             <Labels
               labels={Object {}}
             />
@@ -41,21 +49,23 @@ exports[`WorkloadDescription should render with runtimes 1`] = `
           <StackItem
             id="type"
           >
-            <Text
-              component="h3"
+            <Title
+              headingLevel="h6"
+              size="md"
             >
                Type 
-            </Text>
+            </Title>
             N/A
           </StackItem>
           <StackItem
             id="created-at"
           >
-            <Text
-              component="h3"
+            <Title
+              headingLevel="h6"
+              size="md"
             >
                Created at 
-            </Text>
+            </Title>
             <LocalTime
               time=""
             />
@@ -63,11 +73,12 @@ exports[`WorkloadDescription should render with runtimes 1`] = `
           <StackItem
             id="resource-version"
           >
-            <Text
-              component="h3"
+            <Title
+              headingLevel="h6"
+              size="md"
             >
                Resource Version 
-            </Text>
+            </Title>
           </StackItem>
           <StackItem
             id="runtimes"
@@ -101,100 +112,44 @@ exports[`WorkloadDescription should render with runtimes 1`] = `
   <GridItem
     span={4}
   >
-    <Card
-      style={
-        Object {
-          "height": "100%",
+    <MiniGraphCard
+      dataSource={
+        GraphDataSource {
+          "_errorMessage": null,
+          "_fetchParams": Object {
+            "duration": 0,
+            "edgeLabelMode": "noEdgeLabels",
+            "graphType": "versionedApp",
+            "injectServiceNodes": true,
+            "namespaces": Array [],
+            "showSecurity": false,
+            "showUnusedNodes": false,
+          },
+          "_isError": false,
+          "_isLoading": false,
+          "decoratedData": [Function],
+          "emit": [Function],
+          "eventEmitter": EventEmitter {
+            "_events": Object {},
+            "_eventsCount": 0,
+          },
+          "fetchDataForNamespaces": [Function],
+          "fetchDataForNode": [Function],
+          "fetchGraphData": [Function],
+          "graphDuration": 0,
+          "graphElements": Object {
+            "edges": Array [],
+            "nodes": Array [],
+          },
+          "graphTimestamp": 0,
+          "on": [Function],
+          "promiseRegistry": PromisesRegistry {
+            "promises": Map {},
+          },
+          "removeListener": [Function],
         }
       }
-    >
-      <CardBody>
-        <Title
-          headingLevel="h3"
-          size="2xl"
-        >
-           
-          Graph Overview
-           
-        </Title>
-        <div
-          style={
-            Object {
-              "height": "300px",
-            }
-          }
-        >
-          <CytoscapeGraph
-            activeNamespaces={
-              Array [
-                Object {
-                  "name": "my-namespace",
-                },
-              ]
-            }
-            containerClassName="f1niyge3"
-            dataSource={
-              GraphDataSource {
-                "_errorMessage": null,
-                "_fetchParams": Object {
-                  "duration": 0,
-                  "edgeLabelMode": "noEdgeLabels",
-                  "graphType": "versionedApp",
-                  "injectServiceNodes": true,
-                  "namespaces": Array [],
-                  "showSecurity": false,
-                  "showUnusedNodes": false,
-                },
-                "_isError": false,
-                "_isLoading": false,
-                "decoratedData": [Function],
-                "emit": [Function],
-                "eventEmitter": EventEmitter {
-                  "_events": Object {},
-                  "_eventsCount": 0,
-                },
-                "fetchDataForNamespaces": [Function],
-                "fetchDataForNode": [Function],
-                "fetchGraphData": [Function],
-                "graphDuration": 0,
-                "graphElements": Object {
-                  "edges": Array [],
-                  "nodes": Array [],
-                },
-                "graphTimestamp": 0,
-                "on": [Function],
-                "promiseRegistry": PromisesRegistry {
-                  "promises": Map {},
-                },
-                "removeListener": [Function],
-              }
-            }
-            displayUnusedNodes={[Function]}
-            edgeLabelMode="noEdgeLabels"
-            graphType="app"
-            isMTLSEnabled={false}
-            isMiniGraph={true}
-            layout={
-              Object {
-                "fit": false,
-                "name": "dagre",
-                "nodeDimensionsIncludeLabels": true,
-                "rankDir": "LR",
-              }
-            }
-            refreshInterval={0}
-            showCircuitBreakers={false}
-            showMissingSidecars={true}
-            showNodeLabels={true}
-            showSecurity={false}
-            showServiceNodes={true}
-            showTrafficAnimation={true}
-            showUnusedNodes={false}
-            showVirtualServices={true}
-          />
-        </div>
-      </CardBody>
-    </Card>
+    />
   </GridItem>
   <GridItem
     span={4}
@@ -215,16 +170,24 @@ exports[`WorkloadDescription should render with runtimes 1`] = `
           Health Overview
            
         </Title>
-        <Stack>
+        <Stack
+          gutter="md"
+          style={
+            Object {
+              "marginTop": "10px",
+            }
+          }
+        >
           <StackItem
             className="stack_service_details"
             id="health"
           >
-            <Text
-              component="h3"
+            <Title
+              headingLevel="h6"
+              size="md"
             >
                Overall Health
-            </Text>
+            </Title>
             <HealthIndicator
               id=""
               mode={0}
