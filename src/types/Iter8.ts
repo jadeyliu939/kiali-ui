@@ -16,6 +16,8 @@ export interface Iter8Experiment {
   candidate: string;
   candidatePercentage: number;
   namespace: string;
+  startedAt: number;
+  endedAt: number;
 }
 
 export interface ExpId {
@@ -34,8 +36,8 @@ export interface ExperimentItem {
   status: string;
   labels?: { [key: string]: string };
   createdAt: string;
-  startedAt: string;
-  endedAt: string;
+  startedAt: number;
+  endedAt: number;
   resourceVersion: string;
   baseline: string;
   baselinePercentage: number;

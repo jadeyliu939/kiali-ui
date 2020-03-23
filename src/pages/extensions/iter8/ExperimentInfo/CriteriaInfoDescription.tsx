@@ -86,9 +86,10 @@ class CriteriaInfoDescription extends React.Component<ExperimentInfoDescriptionP
 
       <DataListCell key={'tolerance' + idx} width={5}>
         <List variant="inline">
-          {criteria.status.conclusions.map((c, _) => {
-            return <ListItem> {c} </ListItem>;
-          })}
+          {criteria.status.conclusions &&
+            criteria.status.conclusions.map((c, _) => {
+              return <ListItem> {c} </ListItem>;
+            })}
         </List>
       </DataListCell>,
 
@@ -140,12 +141,8 @@ class CriteriaInfoDescription extends React.Component<ExperimentInfoDescriptionP
 
               {this.props.criterias.map((criteria, idx) => {
                 const rows: IRow[] = [
-                  {
-                    cells: [{ title: 'Query Template' }, { title: criteria.metric.query_template }]
-                  },
-                  {
-                    cells: [{ title: 'Sample Size Template' }, { title: criteria.metric.sample_size_template }]
-                  }
+                  { cells: [{ title: 'Query Template' }, { title: criteria.metric.query_template }] },
+                  { cells: [{ title: 'Sample Size Template' }, { title: criteria.metric.sample_size_template }] }
                 ];
                 return (
                   <DataList aria-label="simple-item2">

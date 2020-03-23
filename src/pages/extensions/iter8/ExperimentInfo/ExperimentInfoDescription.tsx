@@ -33,6 +33,8 @@ interface ExperimentInfoDescriptionProps {
   experimentDetails: Iter8ExpDetailsInfo;
   experiment: string;
   duration: number;
+  startTime: number;
+  endTime: number;
   // app: App;
   // miniGraphDataSource: GraphDataSource;
 }
@@ -43,8 +45,8 @@ const emptyExperiment: Iter8ExpDetailsInfo = {
     phase: '',
     status: '',
     createdAt: '',
-    startedAt: '',
-    endedAt: '',
+    startedAt: 0,
+    endedAt: 0,
     resourceVersion: '',
     baseline: '',
     baselinePercentage: 0,
@@ -125,13 +127,19 @@ class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptio
   render() {
     let startTime = 0;
     let endTime = 0;
-    let timeWindowType = 'Life';
+    let timeWindowType = 'Live';
     if (this.props.experimentDetails != emptyExperiment) {
-      startTime = new Date(this.props.experimentDetails.experimentItem.startedAt).getTime();
-      if (this.props.experimentDetails.experimentItem.endedAt != '') {
-        endTime = new Date(this.props.experimentDetails.experimentItem.endedAt).getTime();
-        timeWindowType = 'Snapshot';
-      }
+      //  startTime = new Date(this.props.experimentDetails.experimentItem.startedAt).getTime();
+      startTime = new Date(this.props.experimentDetails.experimentItem.startedAt / 1000000).getTime();
+      endTime = new Date(this.props.experimentDetails.experimentItem.endedAt / 1000000).getTime();
+
+      // if (this.props.experimentDetails.experimentItem.endedAt != '') {
+      //   endTime = new Date(this.props.experimentDetails.experimentItem.endedAt).getTime();
+      //   timeWindowType = 'Snapshot';
+      // }
+    } else {
+      startTime = new Date(this.props.startTime / 1000000).getTime();
+      endTime = new Date(this.props.endTime / 1000000).getTime();
     }
     return (
       <Grid gutter="md">
@@ -198,13 +206,17 @@ class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptio
                     <GridItem span={6}>
                       <StackItem id={'started_at'}>
                         <Text component={TextVariants.h3}> Started at </Text>
-                        <LocalTime time={this.props.experimentDetails.experimentItem.startedAt} />
+                        <LocalTime
+                          time={new Date(this.props.experimentDetails.experimentItem.startedAt / 1000000).toISOString()}
+                        />
                       </StackItem>
                     </GridItem>
                     <GridItem span={6}>
                       <StackItem id={'ended_at'}>
                         <Text component={TextVariants.h3}> Ended at </Text>
-                        <LocalTime time={this.props.experimentDetails.experimentItem.endedAt} />
+                        <LocalTime
+                          time={new Date(this.props.experimentDetails.experimentItem.endedAt / 1000000).toISOString()}
+                        />
                       </StackItem>
                     </GridItem>
                   </Grid>

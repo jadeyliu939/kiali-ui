@@ -7,7 +7,7 @@ import ParameterizedTabs, { activeTab } from '../../../components/Tab/Tabs';
 import * as API from '../../../services/Api';
 import * as AlertUtils from '../../../utils/AlertUtils';
 import { Iter8Info, Iter8ExpDetailsInfo } from '../../../types/Iter8';
-
+import { AutomationIcon } from '@patternfly/react-icons';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,7 +17,8 @@ import {
   DropdownToggle,
   Tab,
   Toolbar,
-  ToolbarSection
+  ToolbarSection,
+  Tooltip
 } from '@patternfly/react-core';
 import ExperimentInfoDescription from './ExperimentInfo/ExperimentInfoDescription';
 import CriteriaInfoDescription from './ExperimentInfo/CriteriaInfoDescription';
@@ -29,8 +30,10 @@ import RefreshButtonContainer from '../../../components/Refresh/RefreshButton';
 // import GraphDataSource from '../../../services/GraphDataSource';
 import { App } from '../../../types/App';
 import * as FilterHelper from '../../../components/FilterList/FilterHelper';
+import { KialiIcon } from '../../../config/KialiIcon';
 // import BreadcrumbView from '../../../components/BreadcrumbView/BreadcrumbView';
 // import PfTitle from '../../../components/Pf/PfTitle';
+import { OkIcon } from '@patternfly/react-icons';
 
 type ExpDetailsState = {
   iter8Info: Iter8Info;
@@ -55,8 +58,8 @@ const emptyExperiment: Iter8ExpDetailsInfo = {
     phase: '',
     status: '',
     createdAt: '',
-    startedAt: '',
-    endedAt: '',
+    startedAt: 0,
+    endedAt: 0,
     resourceVersion: '',
     baseline: '',
     baselinePercentage: 0,
@@ -86,6 +89,27 @@ const tabIndex: { [tab: string]: number } = {
   info: 0,
   criteria: 1
 };
+
+const TitleStyle = style({
+  fontSize: '19px',
+  fontWeight: 400,
+  margin: '20px 0',
+  padding: '0'
+});
+
+const statusIconStyle = style({
+  fontSize: '1.0em'
+});
+
+const greenIconStyle = style({
+  fontSize: '1.0em',
+  color: 'green'
+});
+
+const redIconStyle = style({
+  fontSize: '1.0em',
+  color: 'red'
+});
 
 class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, ExpDetailsState> {
   //  private graphDataSource: GraphDataSource;
@@ -143,18 +167,25 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
     }
   };
 
-  pageTitle = (title: string) => (
-    <>
-      <div className={`breadcrumb ${containerWhite} ${paddingLeft}`}>
-        <Breadcrumb>
-          <BreadcrumbItem>
-            <Link to={'/extensions/iter8/list'}>Iter8 Experiment</Link>
-          </BreadcrumbItem>
-          <BreadcrumbItem isActive={true}>{title}</BreadcrumbItem>
-        </Breadcrumb>
-      </div>
-    </>
-  );
+  pageTitle = (title: string, status: string, candidate: number) => {
+    return (
+      <>
+        <div className={`breadcrumb ${containerWhite} ${paddingLeft}`}>
+          <Breadcrumb>
+            <BreadcrumbItem>
+              <Link to={'/extensions/iter8/list'}>Iter8 Experiment</Link>
+            </BreadcrumbItem>
+            <BreadcrumbItem isActive={true}>{title}</BreadcrumbItem>
+          </Breadcrumb>
+          <h2 className={TitleStyle}>
+            <AutomationIcon /> {title} {this.experimentStatusIcon(status, candidate)}
+          </h2>
+
+          {this.renderActions()}
+        </div>
+      </>
+    );
+  };
 
   // Invoke the history object to update and URL and start a routing
   goExperimentsPage = () => {
@@ -255,7 +286,51 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
       </Toolbar>
     );
   };
+
+  experimentStatusIcon = (phase: string, candidate: number) => {
+    let className = greenIconStyle;
+    if (candidate === 0) {
+      className = redIconStyle;
+    }
+    switch (phase) {
+      case 'Initializing':
+        return (
+          <Tooltip content={<>{phase}</>}>
+            <KialiIcon.PendingIcon className={statusIconStyle} />
+          </Tooltip>
+        );
+      case 'Progressing':
+        return (
+          <Tooltip content={<>{phase}</>}>
+            <KialiIcon.InProgress className={statusIconStyle} />
+          </Tooltip>
+        );
+      case 'Pause':
+        return (
+          <Tooltip content={<>{phase}</>}>
+            <KialiIcon.PauseCircle className={statusIconStyle} />
+          </Tooltip>
+        );
+      case 'Completed':
+        return (
+          <Tooltip content={<>{phase}</>}>
+            <OkIcon className={className} />
+          </Tooltip>
+        );
+      default:
+        return (
+          <Tooltip content={<>{phase}</>}>
+            <KialiIcon.InProgress className={statusIconStyle} />
+          </Tooltip>
+        );
+    }
+  };
+
   render() {
+    const urlParams = new URLSearchParams(history.location.search);
+    const startTime = parseInt(urlParams.get('startTime') || '') || 0;
+    const endTime = parseInt(urlParams.get('endTime') || '') || 0;
+
     const overviewTab = (
       <Tab eventKey={0} title="Overview" key="Overview">
         <ExperimentInfoDescription
@@ -264,6 +339,8 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
           target={this.props.match.params.name}
           experimentDetails={this.state.expDetailsInfo}
           duration={FilterHelper.currentDuration()}
+          startTime={startTime}
+          endTime={endTime}
         />
       </Tab>
     );
@@ -273,13 +350,15 @@ class ExperimentDetailsPage extends React.Component<RouteComponentProps<Props>, 
       </Tab>
     );
 
-    // Default tabs
     const tabsArray: any[] = [overviewTab, criteriaTab];
     const title = this.props.match.params.experiment;
     return (
       <>
-        {this.pageTitle(title)}
-        {this.renderActions()}
+        {this.pageTitle(
+          title,
+          this.state.expDetailsInfo.experimentItem.phase,
+          this.state.expDetailsInfo.experimentItem.candidatePercentage
+        )}
 
         <ParameterizedTabs
           id="basic-tabs"

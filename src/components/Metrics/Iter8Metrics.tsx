@@ -11,7 +11,6 @@ import { TimeRange } from '../../types/Common';
 import { Direction } from '../../types/MetricsOptions';
 import * as AlertUtils from '../../utils/AlertUtils';
 import { Iter8MetricsOptions } from '../../types/Iter8';
-import { evalTimeRange } from 'types/Common';
 import * as MetricsHelper from './Helper';
 import { MetricsSettings, LabelsSettings } from '../MetricsOptions/MetricsSettings';
 import MetricsReporter from '../MetricsOptions/MetricsReporter';
@@ -19,11 +18,8 @@ import history, { URLParam } from '../../app/History';
 import { MetricsObjectTypes } from '../../types/Metrics';
 import { GrafanaInfo } from '../../types/GrafanaInfo';
 import { MessageType } from '../../types/MessageCenter';
-import { SpanOverlay } from './SpanOverlay';
 import TimeRangeComponent from 'components/Time/TimeRangeComponent';
 import { retrieveTimeRange, storeBounds } from 'components/Time/TimeRangeHelper';
-import { ToolbarDropdown } from '../ToolbarDropdown/ToolbarDropdown';
-import { style } from 'typestyle';
 
 type MetricsState = {
   dashboard?: DashboardModel;
@@ -54,19 +50,9 @@ type Props = Iter8MetricsProps & {
   jaegerIntegration: boolean;
 };
 
-const displayFlex = style({
-  display: 'flex',
-  marginTop: '5px'
-});
-
-const metricTypes: { [key: string]: string } = {
-  SnapShot: 'SnapShot',
-  Life: 'Life'
-};
-
 class Iter8Metrics extends React.Component<Props, MetricsState> {
   options: Iter8MetricsOptions;
-  spanOverlay: SpanOverlay;
+  // spanOverlay: SpanOverlay;
   static grafanaInfoPromise: Promise<GrafanaInfo | undefined> | undefined;
 
   constructor(props: Props) {
@@ -77,7 +63,7 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
     this.options = this.initOptions(settings);
     // Initialize active filters from URL
     this.state = { labelsSettings: settings.labelsSettings, grafanaLinks: [], timeRange: timeRange };
-    this.spanOverlay = new SpanOverlay(changed => this.setState({ spanOverlay: changed }));
+    // this.spanOverlay = new SpanOverlay(changed => this.setState({ spanOverlay: changed }));
   }
 
   initOptions(settings: MetricsSettings): Iter8MetricsOptions {
@@ -95,13 +81,13 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
 
   refresh = () => {
     this.fetchMetrics();
-    if (this.props.jaegerIntegration) {
-      this.spanOverlay.fetch(
-        this.props.namespace,
-        this.props.object,
-        this.options.duration || MetricsHelper.defaultMetricsDuration
-      );
-    }
+    // if (this.props.jaegerIntegration && this.props.timeWindowType == 'Live') {
+    //   this.spanOverlay.fetch(
+    //     this.props.namespace,
+    //     this.props.object,
+    //     this.options.duration || MetricsHelper.defaultMetricsDuration
+    //   );
+    // }
   };
 
   fetchMetrics = () => {
@@ -115,7 +101,8 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
       this.options.endTime = this.props.endTime;
       this.options.timeWindowType = 'SnapShot';
     } else {
-      this.options.timeWindowType = 'Life';
+      this.options.startTime = this.props.startTime;
+      this.options.timeWindowType = 'Live';
     }
     promise = API.getIter8Dashboard(this.props.namespace, this.props.object, this.options);
 
@@ -162,7 +149,7 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
 
   onTimeFrameChanged = (range: TimeRange) => {
     this.setState({ timeRange: range }, () => {
-      this.spanOverlay.resetLastFetchTime();
+      // this.spanOverlay.resetLastFetchTime();
       this.refresh();
     });
   };
@@ -190,32 +177,6 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
 
   iter8EvalTimeRange = (from, to): [Date, Date] => {
     return [new Date(from), to ? new Date(to) : new Date()];
-  };
-
-  private setTimeWindow = (timeWindowType: string) => {
-    if (timeWindowType == 'SnapShot') {
-      // const timeWindow  = this.iter8EvalTimeRange(this.props.startTime, this.props.endTime)
-      this.setState(
-        {
-          timeWindow: this.iter8EvalTimeRange(this.props.startTime, this.props.endTime),
-          metricTypeInfo: timeWindowType
-        },
-        () => {
-          this.refresh();
-        }
-      );
-    } else {
-      // const timeWindow = this.iter8EvalTimeRange(retrieveTimeRange() || MetricsHelper.defaultMetricsDuration)
-      this.setState(
-        {
-          timeWindow: evalTimeRange(retrieveTimeRange() || MetricsHelper.defaultMetricsDuration),
-          metricTypeInfo: timeWindowType
-        },
-        () => {
-          this.refresh();
-        }
-      );
-    }
   };
 
   render() {
@@ -252,7 +213,6 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
           expandHandler={this.expandHandler}
           onClick={this.onClickDataPoint}
           labelPrettifier={MetricsHelper.prettyLabelValues}
-          overlay={this.state.spanOverlay}
           timeWindow={timeWindow}
           brushHandlers={{ onDomainChangeEnd: (_, props) => this.onDomainChange(props.currentDomain.x) }}
         />
@@ -264,17 +224,7 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
     return (
       <Toolbar style={{ paddingBottom: 8 }}>
         <ToolbarGroup style={{ marginLeft: 'auto', marginRight: 0 }}>
-          <ToolbarItem className={displayFlex}>
-            <ToolbarDropdown
-              id={'iter8_mtype'}
-              nameDropdown="&nbsp;&nbsp;Metric Type"
-              tooltip="Display logs for the selected Metric"
-              handleSelect={key => this.setTimeWindow(key)}
-              value={this.state.metricTypeInfo}
-              label={this.state.metricTypeInfo}
-              options={metricTypes}
-            />
-          </ToolbarItem>
+          <ToolbarItem id="timewindowtype">{this.props.timeWindowType} view &nbsp;&nbsp;&nbsp;</ToolbarItem>
           <ToolbarItem>
             <TimeRangeComponent
               range={this.state.timeRange}
@@ -284,7 +234,7 @@ class Iter8Metrics extends React.Component<Props, MetricsState> {
             />
           </ToolbarItem>
           <ToolbarItem>
-            <RefreshContainer id="metrics-refresh" handleRefresh={this.refresh} hideLabel={true} />
+            <RefreshContainer id="it8metrics-refresh" handleRefresh={this.refresh} hideLabel={true} />
           </ToolbarItem>
         </ToolbarGroup>
       </Toolbar>

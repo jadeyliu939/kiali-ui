@@ -31,6 +31,7 @@ import { namespaceEquals } from '../../../utils/Common';
 import { DurationInSeconds } from '../../../types/Common';
 import { ServiceListItem } from '../../../types/ServiceList';
 import { KialiIcon } from '../../../config/KialiIcon';
+import { OkIcon } from '@patternfly/react-icons';
 // Style constants
 const containerPadding = style({ padding: '20px 20px 20px 20px' });
 const containerWhite = style({ backgroundColor: PfColors.White });
@@ -60,6 +61,16 @@ interface State extends FilterComponent.State<Iter8Experiment> {
   sortBy: ISortBy; // ?? not used yet
   dropdownOpen: boolean;
 }
+
+const greenIconStyle = style({
+  fontSize: '2.0em',
+  color: 'green'
+});
+
+const redIconStyle = style({
+  fontSize: '2.0em',
+  color: 'red'
+});
 
 const statusIconStyle = style({
   fontSize: '2.0em'
@@ -257,6 +268,45 @@ class ExperimentListPage extends FilterComponent.Component<ExperimentListCompone
     );
   };
 
+  experimentStatusIcon = (phase: string, candidate: number) => {
+    let className = greenIconStyle;
+    if (candidate === 0) {
+      className = redIconStyle;
+    }
+    switch (phase) {
+      case 'Initializing':
+        return (
+          <Tooltip content={<>{phase}</>}>
+            <KialiIcon.PendingIcon className={statusIconStyle} />
+          </Tooltip>
+        );
+      case 'Progressing':
+        return (
+          <Tooltip content={<>{phase}</>}>
+            <KialiIcon.InProgress className={statusIconStyle} />
+          </Tooltip>
+        );
+      case 'Pause':
+        return (
+          <Tooltip content={<>{phase}</>}>
+            <KialiIcon.PauseCircle className={statusIconStyle} />
+          </Tooltip>
+        );
+      case 'Completed':
+        return (
+          <Tooltip content={<>{phase}</>}>
+            <OkIcon className={className} />
+          </Tooltip>
+        );
+      default:
+        return (
+          <Tooltip content={<>{phase}</>}>
+            <KialiIcon.InProgress className={statusIconStyle} />
+          </Tooltip>
+        );
+    }
+  };
+
   // Helper used to build the table content.
   rows = (): IRow[] => {
     return this.state.experimentLists.map(h => {
@@ -264,49 +314,16 @@ class ExperimentListPage extends FilterComponent.Component<ExperimentListCompone
         cells: [
           <>
             <Link
-              to={`/extensions/iter8/namespaces/${h.namespace}/name/${h.targetService}/experiment/${h.name}`}
+              to={`/extensions/iter8/namespaces/${h.namespace}/name/${h.targetService}/experiment/${h.name}?starttime=${
+                h.startedAt
+              }&endTime=${h.endedAt}`}
               key={'Experiment_' + h.namespace + '_' + h.name}
             >
               {h.name}
             </Link>
           </>,
           <>{h.targetService}</>,
-          <>
-            {(() => {
-              switch (h.phase) {
-                case 'Initializing':
-                  return (
-                    <Tooltip content={<>{h.phase}</>}>
-                      <KialiIcon.PendingIcon className={statusIconStyle} />
-                    </Tooltip>
-                  );
-                case 'Progressing':
-                  return (
-                    <Tooltip content={<>{h.phase}</>}>
-                      <KialiIcon.InProgress className={statusIconStyle} />
-                    </Tooltip>
-                  );
-                case 'Pause':
-                  return (
-                    <Tooltip content={<>{h.phase}</>}>
-                      <KialiIcon.PauseCircle className={statusIconStyle} />
-                    </Tooltip>
-                  );
-                case 'Completed':
-                  return (
-                    <Tooltip content={<>{h.phase}</>}>
-                      <KialiIcon.Ok className={statusIconStyle} />
-                    </Tooltip>
-                  );
-                default:
-                  return (
-                    <Tooltip content={<>{h.phase}</>}>
-                      <KialiIcon.InProgress className={statusIconStyle} />
-                    </Tooltip>
-                  );
-              }
-            })()}
-          </>,
+          <>{this.experimentStatusIcon(h.phase, h.candidatePercentage)}</>,
           <>{h.status}</>,
           <>
             {h.baseline} <br /> {h.baselinePercentage}%
