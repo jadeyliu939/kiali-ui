@@ -188,7 +188,7 @@ class ExperimentInfoDescription extends React.Component<ExperimentInfoDescriptio
                 </DataListItem>
               </DataList>
 
-              <Stack>
+              <Stack gutter="md" style={{ marginTop: '10px' }}>
                 <StackItem id={'Status'}>
                   <Text component={TextVariants.h3}> Status: </Text>
                   {this.props.experimentDetails.experimentItem.status}

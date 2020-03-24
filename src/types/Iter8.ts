@@ -9,7 +9,7 @@ export interface Iter8Info {
 export interface Iter8Experiment {
   name: string;
   phase: string;
-  targetService: string;
+  targetService?: string;
   status: string;
   baseline: string;
   baselinePercentage: number;

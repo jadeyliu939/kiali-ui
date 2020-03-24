@@ -66,7 +66,6 @@ const extensionsItems: MenuItem[] = [
     pathsActive: [/^\/extensions\/threescale/]
   },
   {
-    iconClass: '',
     title: 'Iter8 Experiment',
     to: '/extensions/iter8/list',
     pathsActive: [/^\/extensions\/iter8\/list/]

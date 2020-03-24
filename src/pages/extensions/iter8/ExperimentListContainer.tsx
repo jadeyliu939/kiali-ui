@@ -23,13 +23,12 @@ import RefreshButtonContainer from '../../../components/Refresh/RefreshButton';
 import { KialiAppState } from '../../../store/Store';
 import { activeNamespacesSelector, durationSelector } from '../../../store/Selectors';
 import { connect } from 'react-redux';
-import { IstioConfigItem } from '../../../types/IstioConfigList';
 import { SortField } from '../../../types/SortFilters';
 import Namespace from '../../../types/Namespace';
 import { PromisesRegistry } from '../../../utils/CancelablePromises';
 import { namespaceEquals } from '../../../utils/Common';
 import { DurationInSeconds } from '../../../types/Common';
-import { ServiceListItem } from '../../../types/ServiceList';
+import { ExperimentItem } from '../../../types/Iter8';
 import { KialiIcon } from '../../../config/KialiIcon';
 import { OkIcon } from '@patternfly/react-icons';
 // Style constants
@@ -47,11 +46,11 @@ const pageTitle = (
 );
 
 type ReduxProps = {
-  duration: DurationInSeconds;
+  duration?: DurationInSeconds;
   activeNamespaces: Namespace[];
 };
 
-type ExperimentListComponentProps = ReduxProps & FilterComponent.Props<ServiceListItem>;
+type ExperimentListComponentProps = ReduxProps & FilterComponent.Props<ExperimentItem>;
 
 // State of the component/page
 // It stores the visual state of the components and the experiments fetched from the backend.
@@ -189,7 +188,7 @@ class ExperimentListPage extends FilterComponent.Component<ExperimentListCompone
   //  }
 
   // place holder, need to decide what is sortable field
-  sortItemList(apps: Iter8Experiment[], sortField: SortField<IstioConfigItem>, isAscending: boolean) {
+  sortItemList(apps: Iter8Experiment[], sortField: SortField<Iter8Experiment>, isAscending: boolean) {
     return this.sortExperimentItems(apps, sortField, isAscending);
   }
 
@@ -197,7 +196,6 @@ class ExperimentListPage extends FilterComponent.Component<ExperimentListCompone
     const sortPromise: Promise<Iter8Experiment[]> = new Promise(resolve => {
       resolve(unsorted.sort(isAscending ? sortField.compare : (a, b) => sortField.compare(b, a)));
     });
-
     return sortPromise;
   };
 
