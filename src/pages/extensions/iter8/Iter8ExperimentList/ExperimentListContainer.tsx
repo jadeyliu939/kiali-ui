@@ -5,10 +5,6 @@ import {
   DropdownItem,
   DropdownPosition,
   DropdownToggle,
-  EmptyState,
-  EmptyStateBody,
-  EmptyStateVariant,
-  Title,
   Toolbar,
   ToolbarSection,
   Tooltip,
@@ -64,6 +60,10 @@ const columns = [
   },
   {
     title: 'Namespace',
+    transforms: [sortable]
+  },
+  {
+    title: 'Target Service',
     transforms: [sortable]
   },
   {
@@ -212,6 +212,11 @@ class ExperimentListPage extends React.Component<Props, State> {
     history.push('/extensions/iter8/new');
   };
 
+  serviceLink(namespace: string, workload: string) {
+    let slink = '/namespaces/' + namespace + '/services/' + workload;
+    return <Link to={slink}>{workload}</Link>;
+  }
+
   // This is a simplified actions toolbar.
   // It contains a create new handler action.
   actionsToolbar = () => {
@@ -266,7 +271,9 @@ class ExperimentListPage extends React.Component<Props, State> {
               <Badge className={'virtualitem_badge_definition'}>IT8</Badge>
             </Tooltip>
             <Link
-              to={`/extensions/namespaces/${h.namespace}/iter8/${h.name}`}
+              to={`/extensions/namespaces/${h.namespace}/iter8/${h.name}?target=${h.targetService}&startTime=${
+                h.startedAt
+              }&endTime=${h.endedAt}&baseline=${h.baseline}&candidate=${h.candidate}`}
               key={'Experiment_' + h.namespace + '_' + h.namespace}
             >
               {h.name}
@@ -281,6 +288,16 @@ class ExperimentListPage extends React.Component<Props, State> {
               <Badge className={'virtualitem_badge_definition'}>NS</Badge>
             </Tooltip>
             {h.namespace}
+          </>,
+          <>
+            <Tooltip
+              key={'TooltipTargetService_' + h.targetService}
+              position={TooltipPosition.top}
+              content={<>Experiment TargetService</>}
+            >
+              <Badge className={'virtualitem_badge_definition'}>S</Badge>
+            </Tooltip>
+            {h.targetService ? this.serviceLink(h.namespace, h.targetService) : ''}
           </>,
           <>{h.phase}</>,
           <>{h.status}</>,
@@ -308,25 +325,7 @@ class ExperimentListPage extends React.Component<Props, State> {
           onSort={this.onSort}
         >
           <TableHeader />
-          {this.state.experimentLists.length > 0 ? (
-            <TableBody />
-          ) : (
-            <tr>
-              <td colSpan={columns.length}>
-                <EmptyState variant={EmptyStateVariant.full}>
-                  <Title headingLevel="h5" size="lg">
-                    No Iter8 Experiments found
-                  </Title>
-                  <EmptyStateBody>
-                    No Iter8 Experiments in namespace
-                    {this.props.activeNamespaces.length === 1
-                      ? ` ${this.props.activeNamespaces[0].name}`
-                      : `s: ${this.props.activeNamespaces.map(ns => ns.name).join(', ')}`}
-                  </EmptyStateBody>
-                </EmptyState>
-              </td>
-            </tr>
-          )}
+          <TableBody />
         </Table>
       </div>
     );
